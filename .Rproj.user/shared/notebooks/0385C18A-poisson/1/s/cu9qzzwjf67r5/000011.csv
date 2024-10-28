@@ -1,0 +1,51 @@
+"0","optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = list(1,1),
+      method=""L-BFGS-B"",
+      lower = c(0.01, 0.01), 
+      upper = c(1,1))
+"
+"1","$par
+"
+"1","[1]"
+"1"," 1"
+"1"," 1"
+"1","
+"
+"1","
+"
+"1","$value
+"
+"1","[1]"
+"1"," 0.2073793"
+"1","
+"
+"1","
+"
+"1","$counts
+"
+"1","function "
+"1","gradient "
+"1","
+"
+"1","       3 "
+"1","       3 "
+"1","
+"
+"1","
+"
+"1","$convergence
+"
+"1","[1]"
+"1"," 0"
+"1","
+"
+"1","
+"
+"1","$message
+"
+"1","[1]"
+"1"," ""CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"""
+"1","
+"
+"1","
+"

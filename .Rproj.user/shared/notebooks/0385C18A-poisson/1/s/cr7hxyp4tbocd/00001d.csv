@@ -1,0 +1,11 @@
+"0","fpp <- file.path(""plots"", paste0(""pp_posterior.b0.png""))
+png(fpp)
+gridExtra::grid.arrange(ggS1_b, ggS3_b, ggS2_b, nrow = 3, ncol = 1)
+dev.off()
+"
+"1","null device "
+"1","
+"
+"1","          1 "
+"1","
+"

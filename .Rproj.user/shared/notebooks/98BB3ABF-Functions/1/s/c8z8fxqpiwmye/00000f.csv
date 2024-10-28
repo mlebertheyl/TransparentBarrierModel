@@ -1,0 +1,2 @@
+"0","crs_longlat <- CRS(""+proj=longlat +datum=WGS84"")"
+"0","crs_km <- CRS(""+proj=utm +zone=39 ellps=WGS84 +units=km"")"

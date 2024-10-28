@@ -1,0 +1,7 @@
+"0","pre.field <- fx.pre.field(loc.data = T)"
+"0",""
+"0","# plot(st_geometry(poly.water_sf))"
+"0","ggplot(data = pre.field$poly.water_sf) + "
+"0","      inlabru::gg(pre.field$mesh_h) + #plot mesh_hb alternatively"
+"0","      geom_sf(data =pre.field$loc.data_sf,"
+"0","          col='purple',size=1.7,alpha=0.5)  "

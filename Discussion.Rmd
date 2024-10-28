@@ -1,0 +1,52 @@
+
+# Discussion
+
+In *~BasicFunctions/r_and_t.Rmd* we can check transparency vs range is the curve that varies the less depending on the points along the edge of the barrier I'm choosing. This is not (always) true for correlation barrier vs range so doing $\frac{corr_b}{1} \sim transparency$ is not accurate when geometries are a bit more complex. The examples here show the same, in simple cases 
+$transparency = \frac{corr_b}{1} \sim transparency = \frac{corr_b}{corr_{nb}}$, however it is not true for every example.
+
+It might make more sense to take points in the middle of the barrier and normal areas to build transparency ratio in lots of cases.
+
+### About the code
+
+I haven't corrected the error in Haakon's Barrier Model code that Elias already corrected, but it's an easy fix. Then, Barrier models with $r_b = 1$ should give the same results as stationary model.
+
+To get the barrier triangles I am doing everything *"by hand"*, with `over`, `setdiff`, etc. because it's *easier* for me to understand what´s happening, however implementation wise `fm_contains` is more practical.
+
+## Steps
+
+The decision of making the pair of points specifically the nodes at the edge was made to meet the assumption that the curve transparency vs range is not affected by what's happening around and it's a good representation of the barrier. 
+
+However, the correlation ratio can be measured using any pair of points. Nodes used to get *correlation barrier* don't even have to be the same as *correlation no barrier* (reference correlation, as if there were no barrier).
+
+We can argue that in some cases the user might have knowledge of what transparency means in terms of correlation in the middle of the normal area versus correlation in the middle of the barrier area. 
+
+There are many other options, like taking more than one pair of points and use the average correlation to build the ratio.
+
+What to do will depend on the expert's (user) knowledge about the area. 
+
+## Example 3
+
+Hyperparameter summaries are all similar, changing geometries, and seed for response variable simulation will give different results.
+
+Changing pair of points for which we construct transparency (correlation ratio) will also vary the results. As discussed before which points to use to measure transparency are up to the user.
+
+When aimed ratios are close to 1 the model results should be close to the SPDE stationary model, and when the aim is close to 0.1 the model results should be close to the Barrier model.
+
+## Example 4
+
+Results from the model are similar, however the confidence interval for the range hyperparameter in the Transparent Barrier model is narrower.
+
+## Example 5
+In this example I am checking the results gotten from different pair of points around the barrier.
+
+However, if I actually wanted to consider more than one pair of points I would have to add a line to the `optim` function such that I find the common r (since it is only one barrier) that minimizes the function for these several pairs. It can't be done with `find.aimed.ratios_` because it assumes there's one $r_b$ for each pair, i.e.  `fem$hdim`-1 has to be equal to the number of different $r_b$. 
+
+Taking more pair of points might make sense in very difficult geometries, where taking a pair of points from one side might actually give different results than taking them on another side. I would evaluate the results taking just one pair at different sides of the barrier and check if it varies too much before trying anything more complex. Code wise it is easy to do, it is just a matter of whether we want to add this option on our implementation or not.
+
+Additionally, using $corr_{nb}$ is much more relevant in this example.
+
+Results from the models obviously depend on the simulated variable response (there's an `rnorm`). In these examples the number of obs is low ($n=20$)
+
+## Example 6
+
+How to proceed depends on the information the user/expert has. Choosing the pair of points for which to calculate the ratio is not as straight forward as it was for the other examples, and it depends on what are we considering to be the reference correlation.

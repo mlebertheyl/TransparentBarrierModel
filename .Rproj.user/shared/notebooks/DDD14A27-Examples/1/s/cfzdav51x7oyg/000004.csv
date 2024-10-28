@@ -1,0 +1,9 @@
+"0","gridExtra::grid.arrange(ggex3_pair1_nb, ggex3_pair2_nb, nrow = 2)
+gridExtra::grid.arrange(ggex3_pair1,  
+                        ggex3_pair1_nb, 
+                        nrow = 2)
+"
+"0","gridExtra::grid.arrange(ggex3_pair2,  "
+"0","                        ggex3_pair2_nb, "
+"0","                        nrow = 2)"
+"0",""

@@ -1,0 +1,6 @@
+"0","width <- 2"
+"0","y.mid <- 5"
+"0","y.up <- y.mid + (width/2)"
+"0","y.low <- y.mid - (width/2)"
+"0",""
+"0","location <- matrix(c(c(3.5, 6.5), rep(y.mid, 2)), ncol = 2)"

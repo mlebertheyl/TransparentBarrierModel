@@ -1,0 +1,92 @@
+"0","prior.range = c(1, 0.5)
+prior.sigma = c(1, 0.1)
+
+#### `c(0.1, 0.1)` aimed ratio  
+
+x <- c(0.11934492, 0.08144928)
+
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[1],x[2]))
+
+formula.bm <- y ~ 0 + b0 + f(i, model = barrier.model)
+# f(i, model = ...) i instead of s
+
+res.pp.bm <- list(list())
+
+#res.pp.bm[[1]] first set of priors; [[1]][[1]] the first set of aimed ratios
+## then, 
+## [[1]] set 1: prior.range = c(1, 0.5); prior.sigma = c(1, 0.1)
+## [[1]][[1]] set 1, aim c(0.1, 0.1)
+
+res.pp.bm[[1]][[1]] <- inla(formula.bm,
+                 data = inla.stack.data(stk.pp),
+                 control.predictor = list(A = inla.stack.A(stk.pp)),
+                 family = 'poisson', 
+                 E = inla.stack.data(stk.pp)$e, 
+                 control.inla = list(int.strategy = ""eb""))
+"
+"2","Loading required package: Matrix
+"
+"2","Loading required package: sp
+"
+"2","This is INLA_23.06.29 built 2023-06-30 04:44:50 UTC.
+ - See www.r-inla.org/contact-us for how to get help.
+"
+"0","#### `c(0.7, 0.4)` aimed ratio  "
+"0","x <- c(0.1618411, 0.1028846)"
+"0","barrier.model <- inla.barrier.pcmatern.plus(mesh, "
+"0","                             fem, "
+"0","                             barrier.triangles, "
+"0","                             prior.range = prior.range,"
+"0","                             prior.sigma = prior.sigma,"
+"0","                             range.fraction = c(x[1],x[2]))"
+"0",""
+"0","formula.bm <- y ~ 0 + b0 + f(i, model = barrier.model)"
+"0",""
+"0","## [[1]] set 1: prior.range = c(1, 0.5); prior.sigma = c(1, 0.1)"
+"0","## [[1]][[2]] set 1, aim c(0.7, 0.4)"
+"0",""
+"0","res.pp.bm[[1]][[2]] <- inla(formula.bm,"
+"0","                 data = inla.stack.data(stk.pp),"
+"0","                 control.predictor = list(A = inla.stack.A(stk.pp)),"
+"0","                 family = 'poisson', "
+"0","                 E = inla.stack.data(stk.pp)$e, "
+"0","                 control.inla = list(int.strategy = ""eb""))"
+"2","Loading required package: Matrix
+"
+"2","Loading required package: sp
+"
+"2","This is INLA_23.06.29 built 2023-06-30 04:44:50 UTC.
+ - See www.r-inla.org/contact-us for how to get help.
+"
+"0","#### `c(0.5, 0.5)` aimed ratio  "
+"0","x <- c(0.1466231, 0.1107695)"
+"0","barrier.model <- inla.barrier.pcmatern.plus(mesh, "
+"0","                             fem, "
+"0","                             barrier.triangles, "
+"0","                             prior.range = prior.range,"
+"0","                             prior.sigma = prior.sigma,"
+"0","                             range.fraction = c(x[1],x[2]))"
+"0",""
+"0","formula.bm <- y ~ 0 + b0 + f(i, model = barrier.model)"
+"0",""
+"0","## [[1]] set 1: prior.range = c(1, 0.5); prior.sigma = c(1, 0.1)"
+"0","## [[1]][[3]] set 1, aim c(0.5, 0.5)"
+"0",""
+"0","res.pp.bm[[1]][[3]] <- inla(formula.bm,"
+"0","                 data = inla.stack.data(stk.pp),"
+"0","                 control.predictor = list(A = inla.stack.A(stk.pp)),"
+"0","                 family = 'poisson', "
+"0","                 E = inla.stack.data(stk.pp)$e, "
+"0","                 control.inla = list(int.strategy = ""eb""))"
+"2","Loading required package: Matrix
+"
+"2","Loading required package: sp
+"
+"2","This is INLA_23.06.29 built 2023-06-30 04:44:50 UTC.
+ - See www.r-inla.org/contact-us for how to get help.
+"

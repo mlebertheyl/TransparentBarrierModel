@@ -1,0 +1,632 @@
+
+# Steps 
+
+## Assumptions
+
+ + The curves are completely geometry dependent. However if the pair of points to calculate transparency (correlation ratio) is taken in the middle(ish) the curve transparency vs range is not affected by what's happening around and it's a good representation of the barrier. 
+ + Transparency is fixed constant ratio.
+
+## Transparency
+
+Transparency is the correlation ratio between two points (nodes of the mesh) when there is a barrier over the correlation between the same points as if there were no barrier. 
+
+$$ transparency = \frac{corr_b}{corr_{nb}} $$
+
+Different barriers will have different transparency, and the number of pair of points we choose will depend on the number of these different barriers.
+
+## Simulate a field scenario
+
+Create geometry and mesh. Data is also simulated, however transparency will affect the prior range of the model so we won't use the data until we build the model later.
+
+The following geometry has a normal are with a barrier in the middle.
+
+```{r}
+field.close_1 <- fx.pre.field(loc.data = TRUE,
+                               smalldist = 0,
+                               width = c(1,1)) #n=100
+
+range = 3
+pf <- field.close_1
+mesh <- pf$mesh 
+fem <- pf$mat 
+barrier.triangles <- list(pf$bar1, pf$bar2)
+loc.data <- pf$loc.data
+poly.bar.orginal <- pf$poly.bar.orginal
+poly.water <- pf$poly.water
+
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh_h) + #plot mesh_hb alternatively
+      geom_sf(data =pf$loc.data_sf,
+          col='purple',size=1.7,alpha=0.5) 
+```
+
+
+## Choose the pair of points 
+
+We choose a pair of points (nodes in the mesh) for which we will calculate correlation values.
+
+```{r}
+width <- 1
+npoint = 4
+x.ini <- 4.5
+x.end <- 5.5
+y.mid <- 5
+y.up <- y.mid + (width/2)
+y.low <- y.mid - (width/2)
+
+loc <- c()
+loc[1] <- x.ini
+for(i in 1:npoint){
+  np <- (x.end-x.ini)/npoint
+  loc[i+1] <- c(np*i + 5)
+}
+
+location <- matrix(c(loc, rep(y.mid, length(loc))), ncol = 2)
+
+# Choosing the two points at the edge the barrier
+
+max.edge.length = 0.4
+  
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.up <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+## lower point, i.e. point in barrier area
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up - max.edge.length)), nrow=1, ncol=2))
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector < y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+return.list.low <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+return.list <- list(normal.point = return.list.up, barrier.point = return.list.low)
+
+coord.df_norm <- return.list$normal.point$id.coord
+coord.df_bar <- return.list$barrier.point$id.coord
+
+points_nb <- rbind(coord.df_norm, coord.df_bar)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+SpatialPoints(poly_nb@coords)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) + #plot mesh_hb alternatively
+      geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) 
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) +
+  geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) +
+  ylim(c(4,6)) +
+  xlim(c(3.5,7))
+```
+## Draw the curve...
+
+The following is to understand how are we going to find the range fraction of the barrier based on the set transparency value.
+
+We have $$transparency = \frac{corr_b}{corr_{nb}}$$
+Because I am choosing 2 points that are really close,
+$$transparency \sim \frac{corr_b}{1}$$
+
+```{r}
+prior.range = c(3, 0.5) 
+prior.sigma = c(1, 0.1)
+range.fraction <- c(0.2, 0.2)
+
+id.node.n = return.list$normal.point$id.node
+id.coord.n = return.list$normal.point$id.coord
+id.node.b <- return.list$barrier.point$id.node
+
+#distance between calculated ratio and aimed ratio
+#fem$hdim == length(range.fraction)-1
+ratio.distance <- function(ratio){
+  ratio.aim <- ratio
+  trans.barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction)
+  Q.trans <- inla.rgeneric.q(trans.barrier.model, "Q", 
+                             theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  #~ ratio, corr_b/1
+  empirical.ratio <- 
+    corr.from.Q.simplified(Q = Q.trans,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)                             
+  
+  jump.data <- (empirical.ratio - ratio.aim)^2
+  
+  return(list(trans.barrier.model = trans.barrier.model, 
+              Q.trans = Q.trans,
+              empirical.ratio = empirical.ratio,
+              sq.distance = jump.data)) 
+  
+}
+```
+
+
+```{r}
+r.aim <- 0.5
+rf <- seq(0.1, 1, length.out = 10)
+sq.dist <- list()
+for (i in 1:length(rf)) {
+  range.fraction <- c(rf[i], rf[i])
+  sq.dist[[i]] <- ratio.distance(r.aim)
+}
+
+sq.dist.raim_0.5 #<- sq.dist
+sq.jump <- c()
+emp.ratio <- c()
+
+for (i in 1:length(rf)) {
+  sq.jump[i] <- sq.dist[[i]]$sq.distance
+  emp.ratio[i] <- sq.dist[[i]]$empirical.ratio
+}
+
+sq.jump.raim_0.5 #<- sq.jump
+emp.ratio.raim_0.5 #<- emp.ratio
+
+df.sq.dist <- data.frame(range.fraction = rf,
+                         sq.dist = sq.jump,
+                         corr.r_b = emp.ratio,
+                         aimed.ratio = rep(0.5, length(rf)))
+gg.sq.dist <- 
+  ggplot(data = df.sq.dist, aes(x=range.fraction, y=sq.dist)) +
+  geom_point() +
+  geom_line() +
+  ggsci::scale_color_ucscgb() 
+```
+
+```{r}
+r.aim <- seq(0.1, 1, length.out = 10)
+rf <- seq(0.1, 1, length.out = 50)
+
+sq.dist <- list()
+for (a in 1:length(r.aim)) {
+  sq.dist[[a]] <- list()
+  for (i in 1:length(rf)) {
+    range.fraction <- c(rf[i], rf[i])
+    sq.dist[[a]][[i]] <- ratio.distance(r.aim[a])
+  }
+}
+
+#str(sq.dist)
+sq.dist10by50 #<- sq.dist
+#sq.dist <- sq.dist10by50
+```
+
+```{r}
+## outer loop test
+sq.jump <- list()
+emp.ratio <- list()
+rf4sq.dist <- list()
+r.aim4sq.dist <- list()
+
+for(i in seq_along(sq.dist)) {
+    sq.jump[[i]] <- list()
+    emp.ratio[[i]] <- list()
+    rf4sq.dist[[i]] <- list()
+    r.aim4sq.dist[[i]] <- list()
+    
+    for(j in seq_along(sq.dist[[i]])) {
+        sq.jump[[i]][[j]] <- sq.dist[[i]][[j]]$sq.distance
+        emp.ratio[[i]][[j]] <- sq.dist[[i]][[j]]$empirical.ratio
+        ##
+        rf4sq.dist[[i]][[j]] <- rf[j]
+        r.aim4sq.dist[[i]][[j]] <- r.aim[i]
+    }
+}
+
+df.sq.dist <- data.frame(sq.dist = unlist(sq.jump),
+           corr.r_b = unlist(emp.ratio),
+           range.fraction = unlist(rf4sq.dist),
+           aimed.ratio.num = unlist(r.aim4sq.dist))
+
+df.sq.dist <- df.sq.dist %>% 
+  dplyr::mutate(aimed.ratio = as.factor(aimed.ratio.num))
+
+####
+ggplot(data = df.sq.dist, aes(x=range.fraction, y=sq.dist, 
+                                color = aimed.ratio)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb()
+```
+
+## optim 
+
+```{r}
+#ratio.aim needs to be defined and then run the function again each time. 
+ratio.aim <- 0.5
+ratio.distance4optim <- function(x){
+  trans.barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = c(x,x))
+  
+  Q.trans <- inla.rgeneric.q(trans.barrier.model, "Q", 
+                             theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  #~ ratio, corr_b/1
+  empirical.ratio <- 
+    corr.from.Q.simplified(Q = Q.trans,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)                             
+  
+  jump.data <- (empirical.ratio - ratio.aim)^2
+  
+  return(jump.data) 
+}
+
+optim(0.5, ratio.distance4optim,
+      method="L-BFGS-B",
+      lower = 0.01, upper = 1)
+```
+
+$par: [1] 0.271747
+$value: [1] 1.775919e-11
+$counts: function gradient 
+       6        6 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
+
+```{r}
+ratio.aim <- 0.9
+ratio.distance4optim <- function(x){
+  trans.barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = c(x,x))
+  
+  Q.trans <- inla.rgeneric.q(trans.barrier.model, "Q", 
+                             theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  #~ ratio, corr_b/1
+  empirical.ratio <- 
+    corr.from.Q.simplified(Q = Q.trans,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)                             
+  
+  jump.data <- (empirical.ratio - ratio.aim)^2
+  
+  return(jump.data) 
+}
+
+optim(0.5, ratio.distance4optim,
+      method="L-BFGS-B",
+      lower = 0.01, upper = 1)
+```
+
+$par: [1] 1
+$value: [1] 0.002624985
+$counts: function gradient 
+       5        5 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+
+```{r}
+ratio.aim <- 0.8
+ratio.distance4optim <- function(x){
+  trans.barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = c(x,x))
+  
+  Q.trans <- inla.rgeneric.q(trans.barrier.model, "Q", 
+                             theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  #~ ratio, corr_b/1
+  empirical.ratio <- 
+    corr.from.Q.simplified(Q = Q.trans,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)                             
+  
+  jump.data <- (empirical.ratio - ratio.aim)^2
+  
+  return(jump.data) 
+}
+
+optim(0.5, ratio.distance4optim,
+      method="L-BFGS-B",
+      lower = 0.01, upper = 1)
+```
+
+$par: [1] 0.723884
+$value: [1] 1.866398e-14
+$counts: function gradient 
+       8        8 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
+
+## Barrier model considering the prev. results
+
+Comparison barrier model and stationary model, using the range fraction obtained from `optim` for the barrier model.
+
+```{r}
+## Simulate response variable
+r_nbT <- 3
+r_bT <- 0.4 #It has to be a fraction 
+df.T <- trans.generate.q2(mesh = mesh, fem = fem, 
+                        loc.data = loc.data, 
+                        set.inla.seed = 2303, 
+                        barrier.triangles = barrier.triangles, 
+                        prior.range = c(3, 0.5), prior.sigma = c(1, 0.1),
+                        range.fraction = c(r_bT,r_bT), 
+                        range = r_nbT,
+                        sigma.u = 1, sigma.epsilon = 0.2,
+                        return.list = TRUE)
+
+
+df <- df.T$list.field$df
+A.data <- df.T$list.field$A.data
+
+prior.range.st = c(1, 0.5)
+prior.sigma.st = c(1, 0.1)
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+ 
+model.stat <- inla.spde2.pcmatern(mesh, 
+                                  prior.range = 
+                                    c(prior.range.st[1],
+                                      prior.range.st[2]),
+                                  prior.sigma = 
+                                    c(prior.sigma.st[1],
+                                      prior.sigma.st[2]))
+  
+formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+res.stationary$summary.hyperpar
+```
+
+
+```{r}
+## range fraction when transparency is 0.8
+x <- 0.723884
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x,x))
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+exp(res.barrier$summary.hyperpar) 
+```
+
+```{r}
+## range fraction when transparency is 0.5
+x <- 0.271747
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x,x))
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+exp(res.barrier$summary.hyperpar) 
+```
+## Reference correlation (corr nb) different than 1.
+
+We have $$transparency = \frac{corr_b}{corr_{nb}}$$
+
+```{r}
+ratio.aim <- 0.5
+
+ratio.distance4optim_nb <- function(x){
+  #* nb.model, Q.nb, and corr.nb outside so optim is faster
+  nb.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = c(1,1))
+
+  trans.barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = c(x,x))
+  
+  Q.nb <- inla.rgeneric.q(nb.model, "Q", 
+                          theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  Q.trans <- inla.rgeneric.q(trans.barrier.model, "Q", 
+                             theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  corr.trans <- 
+    corr.from.Q.simplified(Q = Q.trans,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)
+  
+  corr.nb <- 
+    corr.from.Q.simplified(Q = Q.nb,
+                           id.node = id.node.n,
+                           id.coord = id.coord.n,
+                           in.id.node = id.node.b)
+  
+  empirical.ratio <- corr.trans/corr.nb
+  
+  jump.data <- (empirical.ratio - ratio.aim)^2
+  
+  return(jump.data) 
+}
+
+optim(0.5, ratio.distance4optim_nb,
+      method="L-BFGS-B",
+      lower = 0.01, upper = 1)
+```
+
+$par: 0.2298617
+$value: 2.238957e-12
+$counts: function gradient 
+      26       26 
+$convergence: 0
+$message: "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
+
+```{r}
+## range fraction when transparency is 0.5
+x <- 0.2298617
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x,x))
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+exp(res.barrier$summary.hyperpar) 
+```
+
+## Discussion
+
+The decision of making the pair of points specifically the nodes at the edge was made to meet the assumption that the curve transparency vs range is not affected by what's happening around and it's a good representation of the barrier. 
+
+However, the correlation ratio can be measured using any pair of points. Nodes used to get *correlation barrier* don't even have to be the same as *correlation no barrier* (reference correlation, as if there were no barrier).
+
+We can argue that in some cases the user might have knowledge of what transparency means in terms of correlation in the middle of the normal area versus correlation in the middle of the barrier area. 
+
+There are many other options, like taking more than one pair of points and use the average correlation to build the ratio.
+
+What to do will depend on the expert's (user) knowledge about the area. 
+
+

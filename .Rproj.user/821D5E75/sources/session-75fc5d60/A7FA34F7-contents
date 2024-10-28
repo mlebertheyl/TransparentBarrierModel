@@ -1,0 +1,170 @@
+
+```{r}
+str(pp)
+pp
+```
+
+```{r}
+poly.bar1
+
+field.close_2 <- fx.pre.field(loc.data = TRUE,
+                               smalldist = 0,
+                               width = c(1,1)) 
+
+range = 3
+pf <- field.close_2
+mesh <- pf$mesh 
+fem <- pf$mat 
+barrier.triangles <- list(pf$bar1, pf$bar2)
+loc.data <- pf$loc.data
+poly.bar.orginal <- pf$poly.bar.orginal
+poly.water <- pf$poly.water
+
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh_h) + #plot mesh_hb alternatively
+      geom_sf(data =pf$loc.data_sf,
+          col='purple',size=1.7,alpha=0.5) 
+```
+
+do the same with poly.original poly1@ and poly@2
+
+```{r}
+bar2.nodes
+bar.original.nodes
+bar2
+
+bar.original
+str(bar.original.nodes)
+str(bar.original)
+str(bar.original[1])
+```
+
+```{r}
+
+    width = c(0.4, 0.4)
+    max.edge.length = 0.4
+    set.inla.seed = 2303
+
+    
+  
+  poly1 <- local.square.polygon(xlim=c(-1, 5-smalldist/2), 
+                          ylim=5+width[1]*c(-.5, .5))
+  poly2 <- local.square.polygon(xlim=c(5+smalldist/2, 11), 
+                          ylim=5+width[2]*c(-.5, .5))
+  poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+  loc1 <- matrix(c(0,0, 10,0, 0,10, 10,10), 4, 2, byrow = T)
+  
+  seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+  mesh <- inla.mesh.2d(loc=loc1, interior = seg, 
+                    max.e = max.edge.length, offset=1)
+
+  tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+  posTri <- matrix(0, tl, 2)
+
+  for (t in 1:tl){
+    temp = mesh$loc[mesh$graph$tv[t, ], ]
+    posTri[t,] = colMeans(temp)[c(1,2)] 
+    }
+
+  posTri <- SpatialPoints(posTri)
+# - the positions of the triangle centers
+
+  bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+  bar.original <- unlist(bar.original)
+  poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+  bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+  bar1 <- unlist(bar1)
+  poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 2
+  bar2 <- over(poly2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+  bar2 <- unlist(bar2)
+  poly.bar2 <- inla.barrier.polygon(mesh, barrier.triangles = bar2)
+
+  local.square.polygon
+  local.square.polygon_T
+```
+
+
+```{r}
+if(loc.data == TRUE){
+    
+    poly1_h <- local.square.polygon_T(xlim=c(2, 5-smalldist/2), 
+                          ylim=5+width[1]*c(-.5, .5))
+
+    poly2_h <- local.square.polygon_T(xlim=c(5+smalldist/2, 8), 
+                          ylim=5+width[2]*c(-.5, .5))
+    loc1 <- matrix(c(2,2, 8,2, 8,8, 2,8), 4, 2, byrow = T)
+
+    locp <- Polygon(loc1, hole = FALSE)
+    
+    poly.water <- SpatialPolygons(list(Polygons(list(locp, poly1_h, poly2_h), '0')))
+    poly.water_sf <- st_as_sf(poly.water)
+    
+    set.seed(set.inla.seed)
+    loc.data <- spsample(x = poly.water, n = n, type = "random")
+    loc.data_sf <- st_as_sf(loc.data)
+    loc.data <- loc.data@coords
+    
+    mesh_h <-inla.mesh.2d(boundary = poly.water_sf, 
+             max.e = max.edge.length, offset=1)
+    
+    return(list(poly1 = poly1, 
+              poly2 = poly2, 
+              poly.original = poly.original, 
+              mesh = mesh, 
+              posTri = posTri, 
+              poly.bar.orginal = poly.bar.orginal, 
+              bar1 = bar1, 
+              bar2 = bar2, 
+              mat = mat,
+              loc.data = loc.data,
+              poly.water = poly.water,
+              poly.water_sf = poly.water_sf,
+              mesh_h = mesh_h,
+              loc.data_sf = loc.data_sf))
+  }
+  
+  if(loc.data == FALSE) {
+   
+    return(list(poly1 = poly1, 
+              poly2 = poly2, 
+              poly.original = poly.original, 
+              mesh = mesh, 
+              posTri = posTri, 
+              poly.bar.orginal = poly.bar.orginal, 
+              bar1 = bar1, 
+              bar2 = bar2, 
+              mat = mat)) 
+  }
+}
+```
+
+
+```{r}
+local.square.polygon
+local.square.polygon_T
+fx.pre.field
+```
+
+
+

@@ -1,0 +1,7 @@
+"0",""
+"0","ggplot(data = pf$poly.water_sf) + "
+"0","      inlabru::gg(pf$mesh) +"
+"0","  geom_sf(data =sf_points_nb,"
+"0","          col='purple',size=1.7,alpha=0.5) +"
+"0","  ylim(c(4,6.5)) +"
+"0","  xlim(c(5.5,7.5))"
