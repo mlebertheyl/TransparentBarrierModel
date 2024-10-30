@@ -1,8 +1,0 @@
-"0","local.square.polygon_T = function(xlim, ylim){"
-"0","# - output is a square"
-"0","  xlim = range(xlim); ylim = range(ylim)"
-"0","  corner1 = c(xlim[1], ylim[2])"
-"0","  corner2 = c(xlim[2], ylim[1])"
-"0","  poly = Polygon(rbind(corner1, c(corner1[1], corner2[2]), corner2, c(corner2[1], corner1[2]), corner1), hole = TRUE)"
-"0","  return(poly)"
-"0","}"

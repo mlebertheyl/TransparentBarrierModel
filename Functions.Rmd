@@ -6,9 +6,7 @@ library(viridisLite)
 library(RColorBrewer)
 
 library(INLA)
-library(fields)
 library(rgdal)
-library(viridisLite)
 library(scales)
 library(ggplot2)
 library(sf) 
@@ -19,7 +17,27 @@ library(scales)
 library(patchwork)
 
 library(spatstat)
-library(wesanderson)
+
+library(leaflet)
+library(leafpop)
+library(leaflet.extras)
+library(htmltools)
+library(tidyverse)
+library(rnaturalearth)
+library(lattice)
+library(htmlwidgets)
+library(widgetframe)
+library(shiny)
+library(mapdata)
+library(maptools)
+library(rgeos)
+library(raster)
+require(devtools)
+
+library(ggmap)
+library(stars)
+library(fmesher)
+library(viridis)
 ```
 
 # Modified inla functions.

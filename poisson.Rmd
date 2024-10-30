@@ -12,6 +12,7 @@ ex4 <- fx.pre.field(loc.data = TRUE,
                                width = c(2,2)) 
 
 #range = 2
+set.inla.seed <- 2303
 pf <- ex4
 mesh <- pf$mesh 
 fem <- pf$mat 
@@ -870,7 +871,7 @@ $message: [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
 
 As discussed on some of the other examples the choice of points to get the ratio is up to the user. Here, I have some examples where both (pair of points) aimed ratios are the same, e.g. `c(0.1, 0.1)`, however the range for each barrier can be different. If I want both to be the same, meaning find the $r_b$ that minimizes both pairs I can just added as a constraint inside the optim function.
 
-It's also clear calculated $r_b$s when the borders are irregular vary more depending on the choice of points for which we get the ratio, -when we use the same aimed ratio the resulting $r_{b_1}$ and $r_{b_2}$ are not that close-. How to choose the points so the results make sense depends on the specific real life problem, some solutions could be: choosing points in the middle of the barrier(s) to build the ratio, this would also make sense if we have a barrier inside another barrier (Example 6); choosing points along the barrier and then getting the $r_$ that minimizes the function for all.
+It's also clear calculated $r_b$s when the borders are irregular vary more depending on the choice of points for which we get the ratio, -when we use the same aimed ratio the resulting $r_{b_1}$ and $r_{b_2}$ are not that close-. How to choose the points so the results make sense depends on the specific real life problem, some solutions could be: choosing points in the middle of the barrier(s) to build the ratio, this would also make sense if we have a barrier inside another barrier (Example 6); choosing points along the barrier and then getting the $r_b$ that minimizes the function for all.
 
 Be careful with what comes next because all these functions (`optim`, `find.ratio.from.range`, `find.aimed.ratios_`, `nb.model`, etc.)   have pre defined `prior.range` and `prior.sigma`. For the examples above I used `prior.range = c(1, 0.5)`, and `prior.sigma = c(1, 0.1)`.
 
@@ -922,6 +923,7 @@ plot(mesh$loc, asp = 1, col = (w == 0) + 1, pch = 19, xlab = '', ylab = '')
 plot(dmesh, add = TRUE)
 lines(loc1, col = 3)
 ```
+
 ### w2    
 
 Alternatively, the mesh is built (as before) considering the barrier area, however when computing the intersection between each polygon in the dual mesh and  the study area, the latter will only comprehend the normal area.
@@ -954,9 +956,13 @@ plot(mesh$loc, asp = 1, col = (w2 == 0) + 1, pch = 19, xlab = '', ylab = '')
 plot(dmesh, add = TRUE)
 lines(loc1, col = 3)
 ```
+
 ### Discussion about weights w
 
+The difference is in computing the intersection between each polygon in the dual mesh and the study area (w), and not in the mesh itself.
+
 I want to put weight where there can be potential observations. Transparent barriers can potentially have obs inside. Permanent/impermeable barriers ($r_b = 0.01$) can't.
+
 
 ## Projection matrices
 
@@ -1038,7 +1044,7 @@ res.pp.stP2 <- res.pp.st
 and third set from the Archipielago data example. 
 
 The prior for the hyper-parameter $r$ is calibrated to have a median around half of the study area
-and $\sigma_u$ is choosen in order to have probability 0.01 to have values greater than 1.
+and $\sigma_u$ is chosen in order to have probability 0.01 to have values greater than 1.
 
 ```{r}
 ## Prior for range uses half the study area, which is
@@ -2103,9 +2109,9 @@ ggS1_o; ggS3_o; ggS2_o
 Set of priors 2 doesn't make sense when we're considering the range of the barriers to be a fraction of the prior of the normal area, and in this case the prior for the range in the normal area is $0.05$
 
 
-## Discussion
+### Discussion about the mesh
 
-The difference is in computing the intersection between each polygon in the dual mesh and the study area (w), and not in the mesh itself. If I include the barrier area as a boundary then the mesh won't cover the holes and I wouldn't be able to get the correlation between two mesh nodes.
+If I include the barrier area as a boundary then the mesh won't cover the holes and I wouldn't be able to get the correlation between two mesh nodes.
 
 **Does it make sense or not?**
 

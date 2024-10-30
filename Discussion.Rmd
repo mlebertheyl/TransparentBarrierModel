@@ -50,3 +50,33 @@ Results from the models obviously depend on the simulated variable response (the
 ## Example 6
 
 How to proceed depends on the information the user/expert has. Choosing the pair of points for which to calculate the ratio is not as straight forward as it was for the other examples, and it depends on what are we considering to be the reference correlation.
+
+## Poisson data with toy mesh Example
+
+
+## Poisson data with Poisson mesh Example
+
+About the mesh...
+
+The mesh built here is done according to what I would do in a real life application for point processes. The data is simulated as if it was a Poisson process (it's the same as previous example).
+
+I don't want to include the barrier area as a boundary because the mesh wouldn't cover the holes and I wouldn't be able to get the correlation between two mesh nodes.
+
+About the choice of pair of points to get the correlation...
+
+As discussed on some of the other examples the choice of points to get the ratio is up to the user. Here, I have some examples where both (pair of points) aimed ratios are the same, e.g. `c(0.1, 0.1)`, however the range for each barrier can be different. If I want both to be the same, meaning find the $r_b$ that minimizes both pairs I can just added as a constraint inside the optim function.
+
+It's also clear calculated $r_b$s when the borders are irregular vary more depending on the choice of points for which we get the ratio, -when we use the same aimed ratio the resulting $r_{b_1}$ and $r_{b_2}$ are not that close-. How to choose the points so the results make sense depends on the specific real life problem, some solutions could be: choosing points in the middle of the barrier(s) to build the ratio, this would also make sense if we have a barrier inside another barrier (Example 6); choosing points along the barrier and then getting the $r_$ that minimizes the function for all.
+
+About the weight w... 
+
+The difference is in computing the intersection between each polygon in the dual mesh and the study area (w), and not in the mesh itself.
+I want to put weight where there can be potential observations. Transparent barriers can potentially have obs inside. Permanent/impermeable barriers ($r_b = 0.01$) can't.
+
+About the prior sets... 
+Set of priors 2 doesn't make sense when we're considering the range of the barriers to be a fraction of the prior of the normal area, and in this case the prior for the range in the normal area is $0.05$
+
+
+
+
+
