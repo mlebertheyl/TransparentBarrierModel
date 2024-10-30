@@ -13,13 +13,19 @@ Toy example when we have more than one barrier.
 ## 4. Examples
 More geometry examples, with canals, etc.
 
-"Example4.Rmd"; "sq example.Rmd", "sqxsq example.Rmd" are inside "Examples.Rmd" too
+Has:
++ Example 3
++ Example4.Rmd 
++ sq example.Rmd
++ sq^2 example.Rmd
 
-## 5. Poisson data with toy mesh Example
+## 5. Poisson
+
+### Poisson data with toy mesh Example
 
 Mesh here is built in the same way as previous examples (BTopic103). However, data is simulated as if it was a Poisson process (SPDE book).
 
-## 6. Poisson data with Poisson mesh Example.
+### Poisson data with Poisson mesh Example.
 
 The mesh built here is done according to what I would do in a real life application for point processes. The data is simulated as if it was a Poisson process (it's the same as previous example).
 
