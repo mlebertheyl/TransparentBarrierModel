@@ -38,6 +38,9 @@ library(ggmap)
 library(stars)
 library(fmesher)
 library(viridis)
+
+library(lbfgsb3c)
+library(splines)
 ```
 
 # Modified inla functions.
@@ -715,7 +718,7 @@ Function to build barrier model with different transparencies and also compare w
 ```{r dt2 chunk19}
 transparency <- function(mesh = mesh, fem = fem, 
                          barrier.triangles = barrier.triangles, 
-                     prior.range = c(1.44, 0.5), prior.sigma = c(0.7, 0.5),
+                     prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
                      range.fraction = range.fraction,
                      range = 3,
                      set.inla.seed = 2303, # make sure is the same as prev. fx if loc.data = T
@@ -723,7 +726,7 @@ transparency <- function(mesh = mesh, fem = fem,
                      sigma.u = 1, sigma.epsilon = 0.2,
                      poly.original = poly.bar.orginal,
                      prior.range.st = c(1, 0.5),    
-                     prior.sigma.st = c(1, 0.5),
+                     prior.sigma.st = c(1, 0.1),
                      return.list = TRUE) {
   
   # field = TRUE has to be true to start
@@ -808,7 +811,7 @@ poly.bar.orginal <- pf$poly.bar.orginal
 
 trans <- transparency(mesh = mesh, fem = fem, 
                      barrier.triangles = barrier.triangles, 
-                     prior.range = c(1.44, 0.5), prior.sigma = c(0.7, 0.5),
+                     prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
                      range.fraction = range.fraction,
                      range = 3,
                      set.inla.seed = 2303,
@@ -816,7 +819,7 @@ trans <- transparency(mesh = mesh, fem = fem,
                      sigma.u = 1, sigma.epsilon = 0.2,
                      poly.original = poly.bar.orginal,
                      prior.range.st = c(1, 0.5),    
-                     prior.sigma.st = c(1, 0.5),
+                     prior.sigma.st = c(1, 0.1),
                      return.list = TRUE)
 ```
 
@@ -837,7 +840,7 @@ plot.transparency <- function(nfrac = 1, # length of fractions for range
                                               pch = 16, 
                                               cex = 0.8, 
                                               col=alpha('gray', 0)),
-                              gif.path = "gif/gif.fx/",
+                              gif.path = "gif/",
                               pal.field = turbo(50),
                               pal.pos.mean = turbo(50),
                               pal.pos.sd = turbo(50),
@@ -894,7 +897,7 @@ plot.transparency <- function(nfrac = 1, # length of fractions for range
     range.fraction <- c(left.poly, f)
     trans <- transparency(mesh = mesh, fem = fem, 
                 barrier.triangles = barrier.triangles, 
-                prior.range = c(1.44, 0.5), prior.sigma = c(0.7, 0.5),
+                prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
                 range.fraction = c(left.poly, f),
                 range = range,
                 set.inla.seed = set.inla.seed, # make sure is the same as prev. fx if loc.data = T
@@ -902,7 +905,7 @@ plot.transparency <- function(nfrac = 1, # length of fractions for range
                 sigma.u = 1, sigma.epsilon = 0.2,
                 poly.original = poly.bar.orginal,
                 prior.range.st = c(1, 0.5),
-                prior.sigma.st = c(1, 0.5),
+                prior.sigma.st = c(1, 0.1),
                 return.list = TRUE
     )
     
@@ -1297,6 +1300,27 @@ corr.from.Q.alltogether <- function(
 
 #sd*sd[id.node[[i]]]=sd[in.id.node[[i]]]*sd[id.node[[i]]]
 
+corr.from.Q.separately <- function(
+    Q,
+    id.node,
+    in.id.node) {
+  
+  sd <- sqrt(diag(inla.qinv(Q)))
+  
+  corr2points <- list()
+  for (i in 1:length(id.node)) {
+    
+    Inode <- rep(0, dim(Q)[1]) 
+    Inode[id.node[[i]]] = 1 
+    covar.column = solve(Q, Inode)
+    corr = drop(matrix(covar.column)) / (sd*sd[id.node[[i]]])
+    corr2points[[i]] <- corr[in.id.node[[i]]]
+  }
+  
+  return(corr2points)
+}
+
+
 find.aimed.ratios <- function(x, aimed.ratio) {
   
   barrier.model <- inla.barrier.pcmatern.plus(
@@ -1386,6 +1410,183 @@ find.ratio.from.range <- function(x, corr.nb) {
   return(B)
 }
 ```
+
+```{r}
+local.plot.field.book <- function(field, xlim, ylim, ...){
+  if (missing(xlim)) xlim = poly.water@bbox[1, ] 
+  if (missing(ylim)) ylim = poly.water@bbox[2, ]
+  proj = inla.mesh.projector(mesh, xlim = xlim,
+    ylim = ylim, dims=c(300, 300))
+  field.proj = inla.mesh.project(proj, field)
+  image.plot(list(x = proj$x, y = proj$y, z = field.proj),
+    xlim = xlim, ylim = ylim, ...)
+}
+
+id.node.tbm <- function(mesh, 
+                        location, 
+                        npoint){ #npoint=nrow(location)
+  A.tmp <- list()
+  id.node <- list()
+  id.coord <- list()
+  for (n in 1:npoint) {
+    
+    A.tmp[[n]] <- inla.spde.make.A(mesh=mesh,
+                      loc = matrix(c(location[n,1],location[n,2]), nrow=1, ncol=2))
+
+    id.node[[n]] = which.max(A.tmp[[n]][1, ])
+    id.coord[[n]] <- c(mesh$loc[id.node[[n]], 1], mesh$loc[id.node[[n]], 2])
+  }
+  return.list <- list(id.node = id.node, id.coord = id.coord)
+  return(return.list)
+}
+
+model.tbm.plus <- function(mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                      range.fraction = range.fraction,
+                      range = range,
+                      set.inla.seed = set.inla.seed, # make sure is the same as prev. fx if loc.data = T
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = c(1, 0.5),    
+                      prior.sigma.st = c(1, 0.1),
+                      return.list = TRUE) {
+  
+  # field = TRUE has to be true to start
+  tbm <- inla.barrier.pcmatern.plus(mesh, fem, barrier.triangles, 
+                                              prior.range, prior.sigma, 
+                                              range.fraction)
+  # range fraction has to have the same length as barrier triangles
+  Q <- inla.rgeneric.q(tbm, "Q", theta = c(log(1), log(range))) #log(1) or log(prior.sigma[1])
+  u <- suppressWarnings(inla.qsample(n=1, Q=Q, seed = set.inla.seed))
+  u <- u[ ,1]
+    
+  A.data <- inla.spde.make.A(mesh, loc.data)
+  #Q from mydiff.r function
+    
+  u.data <- A.data %*% u
+  
+  df <- data.frame(loc.data)
+  names(df) <- c('locx', 'locy')
+  df$y <- drop(sigma.u * u.data + sigma.epsilon * rnorm(nrow(df)))
+  
+    
+  stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+
+    
+  formula <- y ~ 0 + intercept + f(s, model = tbm)
+  # - The spatial model component is different from stationary
+  # - The rest of the model setup is the same as in the stationary case!
+  # - - e.g. the inla(...) call below is the same, 
+  #     only this formula is different
+  
+    
+  res.tbm <- inla(formula, data = inla.stack.data(stk),
+                  control.predictor = list(A = inla.stack.A(stk)),
+                  family = 'gaussian',
+                  control.family = list(hyper = list(
+                    prec = list(prior = "pc.prec", fixed = FALSE, param = c(0.2,0.5)))),
+                  control.mode=list(restart=T, theta=c(3.2, 0.4, 1.6)))
+  
+  ##barrier model (classic)
+  bm <- inla.barrier.pcmatern.plus(mesh, fem, barrier.triangles,
+                                   prior.range, prior.sigma, 
+                                   range.fraction = c(0.01, 0.01))
+  
+  formula.bm <- y ~ 0 + intercept + f(s, model = bm)
+  
+  res.bm <- inla(formula.bm, 
+                 data = inla.stack.data(stk),
+                 control.predictor = list(A = inla.stack.A(stk)),
+                 family = 'gaussian',
+                 control.family = list(hyper = list(
+                   prec = list(prior = "pc.prec", fixed = FALSE, param = c(0.2,0.5)))),
+                 control.mode=list(restart=T, theta=c(3.2, 0.4, 1.6)))
+  ##stationary
+  model.stat <- inla.spde2.pcmatern(mesh, 
+                                    prior.range = c(prior.range.st[1], prior.range.st[2]),
+                                    prior.sigma = c(prior.sigma.st[1], prior.sigma.st[2]))
+  
+  formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+  res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+  if (return.list == TRUE) {
+    
+    list.field <- list(barrier.model = tbm, Q = Q, sample = u, df = df)
+    pos.tbm <- list(res = res.tbm)
+    pos.bm <- list(res = res.bm)
+    pos.st <- list(res = res.stationary)
+    
+    return(list(list.field = list.field, pos.tbm = pos.tbm, pos.bm = pos.bm, pos.st = pos.st))
+  }
+                     
+}
+
+corr.covfx <- function(range.fraction = range.fraction,
+                       id.node = id.node,
+                       prior.range = prior.range) {
+  
+  barrier.model <- inla.barrier.pcmatern.plus(
+    mesh = mesh,
+    fem = fem,
+    barrier.triangles = barrier.triangles,
+    prior.range = prior.range,
+    prior.sigma = prior.sigma,
+    range.fraction = range.fraction)
+  
+  Q <- inla.rgeneric.q(
+    barrier.model, 
+    "Q",
+    theta = c(log(prior.sigma[1]), 
+              log(prior.range[1])))
+
+  sd <- sqrt(diag(inla.qinv(Q)))
+  Inode <- rep(0, dim(Q)[1])
+  Inode[id.node] <- 1
+
+  covar.column <- solve(Q, Inode)
+  corr = drop(matrix(covar.column))/(sd*sd[id.node])
+  cov = drop(matrix(covar.column))
+
+  return.list <- list(corr = corr, cov = cov)
+  return(return.list)
+}
+
+# function for all points
+id.node.tbm <- function(mesh, 
+                        location, 
+                        npoint){ #npoint=nrow(location)
+  A.tmp <- list()
+  id.node <- list()
+  id.coord <- list()
+  for (n in 1:npoint) {
+    
+    A.tmp[[n]] <- inla.spde.make.A(mesh=mesh,
+                      loc = matrix(c(location[n,1],location[n,2]), nrow=1, ncol=2))
+
+    id.node[[n]] = which.max(A.tmp[[n]][1, ])
+    id.coord[[n]] <- c(mesh$loc[id.node[[n]], 1], mesh$loc[id.node[[n]], 2])
+  }
+  return.list <- list(id.node = id.node, id.coord = id.coord)
+  return(return.list)
+}
+```
+
+
 
 
 

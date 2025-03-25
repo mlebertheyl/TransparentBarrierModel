@@ -1,0 +1,2266 @@
+
+Mesh two barrier, i.e. canal
+
+Extend the barrier so it goes to infinity, meaning if the domain is from 2 to 8, the actual mesh goes from 0 to 10
+
+```{r}
+
+```
+
+
+try with barriers that don't cross the outside boundary
+Feb 2
+I had a meeting with Havard y Janet on Thursday 6 and we changed things. I wrote a summary on the readme file
+
+range fraction as fraction
+
+i need loc.data, ill just do the gaussian from pre.field. check if i'll use boundaries like poly.water or not 
+
+```{r}
+smalldist = 1
+width = c(2, 2)
+#width = c(4, 4)
+#max.edge.length = 0.2
+max.edge.length = 0.4
+n = 100
+set.inla.seed = 602
+x.mid <- 10
+xlim.big <- c(0,20)
+xlim.small <- c(3,17)
+ylim.big <- c(0,20)
+ylim.small <- c(3,17)
+
+poly1 <- local.square.polygon(xlim=c(xlim.big[1]-1, x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2 <- local.square.polygon(xlim=c(x.mid+smalldist/2, xlim.big[2]+1), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2]), 4, 2, byrow = T)
+  
+seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+mesh <- inla.mesh.2d(loc=loc1, 
+                     interior = seg, 
+                     max.e = max.edge.length, 
+                     offset=1)
+
+tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+  temp = mesh$loc[mesh$graph$tv[t, ], ]
+  posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+# - the positions of the triangle centers
+
+bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar.original <- unlist(bar.original)
+poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 2
+bar2 <- over(poly2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh, barrier.triangles = bar2)
+
+mat <-  inla.barrier.fem.plus(mesh, list(bar1, bar2)) 
+fem <- mat 
+barrier.triangles <- list(bar1, bar2)
+
+# PLOTS
+poly1_h <- local.square.polygon_T(xlim=c(xlim.small[1], x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2_h <- local.square.polygon_T(xlim=c(x.mid+smalldist/2, xlim.small[2]), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+loc2 <- matrix(c(3,3, 17,3, 17,17, 3,17), 4, 2, byrow = T)
+
+locp2 <- Polygon(loc2, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp2, poly1_h, poly2_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+    
+set.seed(set.inla.seed)
+loc.data <- spsample(x = poly.water, n = n, type = "random")
+loc.data_sf <- st_as_sf(loc.data)
+loc.data <- loc.data@coords
+
+poly.rect <- SpatialPolygons(list(Polygons(list(poly1_h, poly2_h), '0')))
+poly.rect_sf <- st_as_sf(poly.rect)
+poly.sq <- SpatialPolygons(list(Polygons(list(locp2), '0')))
+poly.sq_sf <- st_as_sf(poly.sq)
+
+sq_bbox <- st_bbox(poly.sq_sf) %>% st_as_sfc()
+poly1_bbox <- st_bbox(poly1) %>% st_as_sfc()
+poly2_bbox <- st_bbox(poly2) %>% st_as_sfc()
+```
+
+```{r}
+gg.mesh <- ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7, linetype = "dashed") +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7, linetype = "dashed") +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7)
+
+gg.mesh.water <- ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="black", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, color="black", linewidth = 0.7) +
+  ylim(c(3, 17)) +
+  xlim(c(3, 17))
+
+gg.mesh +
+  geom_sf(data =loc.data_sf,
+          col='black',size=1.7,alpha=0.5)
+
+gg.mesh.water +
+  geom_sf(data =loc.data_sf,
+          col='black',size=1.7,alpha=0.5)
+```
+Mesh for mesh section
+
+```{r}
+smalldist = 1.5
+width = c(3, 3)
+#width = c(4, 4)
+#max.edge.length = 0.2
+max.edge.length = 4
+#n = 100
+#set.inla.seed = 602
+x.mid <- 10
+xlim.big <- c(0,20)
+xlim.small <- c(3,17)
+ylim.big <- c(0,20)
+ylim.small <- c(3,17)
+
+poly1 <- local.square.polygon(xlim=c(xlim.big[1]-1, x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2 <- local.square.polygon(xlim=c(x.mid+smalldist/2, xlim.big[2]+1), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2]), 4, 2, byrow = T)
+
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.small[1], xlim.small[2],
+                 xlim.small[2], xlim.small[1],
+                 xlim.small[1], ylim.small[1],
+                 xlim.small[2], ylim.small[2]), 8, 2, byrow = T)
+  
+seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+mesh <- inla.mesh.2d(loc=loc1, 
+                     interior = seg, 
+                     max.e = max.edge.length, 
+                     offset=1)
+
+tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+  temp = mesh$loc[mesh$graph$tv[t, ], ]
+  posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+# - the positions of the triangle centers
+
+bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar.original <- unlist(bar.original)
+poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 2
+bar2 <- over(poly2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh, barrier.triangles = bar2)
+
+mat <-  inla.barrier.fem.plus(mesh, list(bar1, bar2)) 
+fem <- mat 
+barrier.triangles <- list(bar1, bar2)
+
+# PLOTS
+poly1_h <- local.square.polygon_T(xlim=c(xlim.small[1], x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2_h <- local.square.polygon_T(xlim=c(x.mid+smalldist/2, xlim.small[2]), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+loc2 <- matrix(c(3,3, 17,3, 17,17, 3,17), 4, 2, byrow = T)
+
+locp2 <- Polygon(loc2, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp2, poly1_h, poly2_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+
+poly.rect <- SpatialPolygons(list(Polygons(list(poly1_h, poly2_h), '0')))
+poly.rect_sf <- st_as_sf(poly.rect)
+poly.sq <- SpatialPolygons(list(Polygons(list(locp2), '0')))
+poly.sq_sf <- st_as_sf(poly.sq)
+
+sq_bbox <- st_bbox(poly.sq_sf) %>% st_as_sfc()
+poly1_bbox <- st_bbox(poly1) %>% st_as_sfc()
+poly2_bbox <- st_bbox(poly2) %>% st_as_sfc()
+
+loc.out <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.big[1],ylim.big[1]), 5, 2, byrow = T)
+loc.out.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.out, FALSE)), '0')))
+
+loc.in <- matrix(c(xlim.small[1], ylim.small[1],
+                   xlim.small[2], xlim.small[1],
+                   xlim.small[2], ylim.small[2],
+                   xlim.small[1], xlim.small[2],
+                   xlim.small[1], ylim.small[1]), 5, 2, byrow = T)
+loc.in.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.in, FALSE)), '0')))
+
+plot(loc.out.sp)
+plot(loc.in.sp)
+
+poly.out <- gDifference(loc.out.sp, loc.in.sp)
+plot(poly.out, col = alpha("skyblue", 0.5))
+poly.out_sf <- st_as_sf(poly.out)
+
+ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly2_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly.out_sf, color="black", linewidth = 0.7, fill = "white",  linetype = "dashed") +
+  ylim(c(2, 18)) +
+  xlim(c(2, 18)) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+```{r}
+#mesh2b <- mesh
+mesh <- mesh2b
+
+gg.mesh <- ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7, linetype = "dashed")
+
+gg.mesh.water <- ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly2_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly.out_sf, color="black", linewidth = 0.7, fill = "white",  linetype = "dashed") +
+  ylim(c(2, 18)) +
+  xlim(c(2, 18)) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+```
+
+
+
+```{r}
+smalldist = 0
+width = c(2, 2)
+#width = c(4, 4)
+#max.edge.length = 0.2
+max.edge.length = 4
+#n = 100
+#set.inla.seed = 602
+x.mid <- 10
+xlim.big <- c(0,20)
+xlim.small <- c(3,17)
+ylim.big <- c(0,20)
+ylim.small <- c(3,17)
+
+poly1 <- local.square.polygon(xlim=c(xlim.big[1]-1, x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2 <- local.square.polygon(xlim=c(x.mid+smalldist/2, xlim.big[2]+1), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2]), 4, 2, byrow = T)
+
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.small[1], xlim.small[2],
+                 xlim.small[2], xlim.small[1],
+                 xlim.small[1], ylim.small[1],
+                 xlim.small[2], ylim.small[2]), 8, 2, byrow = T)
+  
+seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+mesh <- inla.mesh.2d(loc=loc1, 
+                     interior = seg, 
+                     max.e = max.edge.length, 
+                     offset=1)
+
+# PLOTS
+poly1_h <- local.square.polygon_T(xlim=c(xlim.small[1], x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2_h <- local.square.polygon_T(xlim=c(x.mid+smalldist/2, xlim.small[2]), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+loc2 <- matrix(c(3,3, 17,3, 17,17, 3,17), 4, 2, byrow = T)
+
+locp2 <- Polygon(loc2, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp2, poly1_h, poly2_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+
+poly.rect <- SpatialPolygons(list(Polygons(list(poly1_h, poly2_h), '0')))
+poly.rect_sf <- st_as_sf(poly.rect)
+poly.sq <- SpatialPolygons(list(Polygons(list(locp2), '0')))
+poly.sq_sf <- st_as_sf(poly.sq)
+
+sq_bbox <- st_bbox(poly.sq_sf) %>% st_as_sfc()
+poly1_bbox <- st_bbox(poly1) %>% st_as_sfc()
+poly2_bbox <- st_bbox(poly2) %>% st_as_sfc()
+
+loc.out <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.big[1],ylim.big[1]), 5, 2, byrow = T)
+loc.out.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.out, FALSE)), '0')))
+
+loc.in <- matrix(c(xlim.small[1], ylim.small[1],
+                   xlim.small[2], xlim.small[1],
+                   xlim.small[2], ylim.small[2],
+                   xlim.small[1], xlim.small[2],
+                   xlim.small[1], ylim.small[1]), 5, 2, byrow = T)
+loc.in.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.in, FALSE)), '0')))
+
+plot(loc.out.sp)
+plot(loc.in.sp)
+
+poly.out <- gDifference(loc.out.sp, loc.in.sp)
+plot(poly.out, col = alpha("skyblue", 0.5))
+poly.out_sf <- st_as_sf(poly.out)
+
+gg.mesh.2 <- ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7, linetype = "dashed")
+
+gg.mesh.water.2 <- ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly2_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly.out_sf, color="black", linewidth = 0.7, fill = "white",  linetype = "dashed") +
+  ylim(c(2, 18)) +
+  xlim(c(2, 18)) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+gg.mesh.2;gg.mesh.water.2
+
+dir <- file.path("plots", "mesh")
+if (!dir.exists(dir)) dir.create(dir)
+
+fpp <- file.path(dir,"mesh1.png")
+#png(fpp)
+gg.mesh
+dev.off()
+
+fpp <- file.path(dir,"mesh1.1.png")
+#png(fpp)
+gg.mesh.water
+dev.off()
+
+fpp <- file.path(dir,"mesh2.png")
+#png(fpp)
+gg.mesh.2
+dev.off()
+
+fpp <- file.path(dir,"mesh2.2.png")
+#png(fpp)
+gg.mesh.water.2
+dev.off()
+
+```
+
+Correlation plots, they have to be done with another mesh (finer)
+
+```{r}
+smalldist = 1.5
+width = c(3, 3)
+#width = c(4, 4)
+#max.edge.length = 0.2
+max.edge.length = 0.4
+#n = 100
+#set.inla.seed = 602
+x.mid <- 10
+xlim.big <- c(0,20)
+xlim.small <- c(3,17)
+ylim.big <- c(0,20)
+ylim.small <- c(3,17)
+
+poly1 <- local.square.polygon(xlim=c(xlim.big[1]-1, x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2 <- local.square.polygon(xlim=c(x.mid+smalldist/2, xlim.big[2]+1), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2]), 4, 2, byrow = T)
+
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.small[1], xlim.small[2],
+                 xlim.small[2], xlim.small[1],
+                 xlim.small[1], ylim.small[1],
+                 xlim.small[2], ylim.small[2]), 8, 2, byrow = T)
+  
+seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+mesh <- inla.mesh.2d(loc=loc1, 
+                     interior = seg, 
+                     max.e = max.edge.length, 
+                     offset=1)
+
+tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+  temp = mesh$loc[mesh$graph$tv[t, ], ]
+  posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+# - the positions of the triangle centers
+
+bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar.original <- unlist(bar.original)
+poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 2
+bar2 <- over(poly2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh, barrier.triangles = bar2)
+
+mat <-  inla.barrier.fem.plus(mesh, list(bar1, bar2)) 
+fem <- mat 
+barrier.triangles <- list(bar1, bar2)
+
+# PLOTS
+poly1_h <- local.square.polygon_T(xlim=c(xlim.small[1], x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2_h <- local.square.polygon_T(xlim=c(x.mid+smalldist/2, xlim.small[2]), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+loc2 <- matrix(c(3,3, 17,3, 17,17, 3,17), 4, 2, byrow = T)
+
+locp2 <- Polygon(loc2, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp2, poly1_h, poly2_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+
+poly.rect <- SpatialPolygons(list(Polygons(list(poly1_h, poly2_h), '0')))
+poly.rect_sf <- st_as_sf(poly.rect)
+poly.sq <- SpatialPolygons(list(Polygons(list(locp2), '0')))
+poly.sq_sf <- st_as_sf(poly.sq)
+
+sq_bbox <- st_bbox(poly.sq_sf) %>% st_as_sfc()
+poly1_bbox <- st_bbox(poly1) %>% st_as_sfc()
+poly2_bbox <- st_bbox(poly2) %>% st_as_sfc()
+
+loc.out <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.big[1],ylim.big[1]), 5, 2, byrow = T)
+loc.out.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.out, FALSE)), '0')))
+
+loc.in <- matrix(c(xlim.small[1], ylim.small[1],
+                   xlim.small[2], xlim.small[1],
+                   xlim.small[2], ylim.small[2],
+                   xlim.small[1], xlim.small[2],
+                   xlim.small[1], ylim.small[1]), 5, 2, byrow = T)
+loc.in.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.in, FALSE)), '0')))
+
+#plot(loc.out.sp)
+#plot(loc.in.sp)
+
+poly.out <- gDifference(loc.out.sp, loc.in.sp)
+#plot(poly.out, col = alpha("skyblue", 0.5))
+poly.out_sf <- st_as_sf(poly.out)
+```
+
+```{r}
+#mesh.corrpoints.1 <- mesh
+mesh <- mesh.corrpoints.1
+
+gg.mesh.cp1 <- ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7, linetype = "dashed")
+
+gg.mesh.water.cp1 <- ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly2_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly.out_sf, color="black", linewidth = 0.7, fill = "white",  linetype = "dashed") +
+  ylim(c(2, 18)) +
+  xlim(c(2, 18)) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+```{r}
+width <- 3
+y.mid <- 10
+y.up <- y.mid + (width/2)
+y.low <- y.mid - (width/2)
+
+location <- matrix(c(c(15, 12.5, 10, 10, 10), rep(y.mid, 5)), ncol = 2)
+```
+
+```{r}
+max.edge.length = 0.4
+
+# p1 15.0 11.5
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p1 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+# p2 
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p2 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+##
+# p3 
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p3 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+##
+# p4 in the middle
+A.tmp <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[4,1],location[4,2]), nrow=1, ncol=2))
+
+id.node = which.max(A.tmp[1, ])
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+
+return.list.p4 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+# p5 in the middle down 
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[5,1],y.low), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[5,1],(y.low - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[5,1],(y.low - max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < y.low)[1]]]
+id.node <- id.nodeA[which(A.y.vector < y.low)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p5 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+
+#return.list.mesh1[[5]] <- return.list.p5
+return.list.mesh1 <- list(return.list.p1, return.list.p2, return.list.p3, return.list.p4, return.list.p5)
+id.coord.mesh1 <- as.matrix(rbind(return.list.mesh1[[1]]$id.coord, return.list.mesh1[[2]]$id.coord, return.list.mesh1[[3]]$id.coord, return.list.mesh1[[4]]$id.coord, return.list.mesh1[[5]]$id.coord))
+
+gg.mesh.water.cp1 +
+  geom_sf(data = st_as_sf(SpatialPoints(id.coord.mesh1)), col = "red") 
+
+gg.mesh.water.cp1 +
+  geom_sf(data = st_as_sf(SpatialPoints(id.coord.mesh1)), col = "red") +
+  xlim(c(8, 17)) +
+  ylim(c(5,15))
+
+range.fraction <- matrix(c(0.2,0.2, 0.3,0.3, 0.5,0.5, 0.7,0.7, 0.8, 0.8), ncol = 2, byrow = T)
+corr.mesh1 <- list()
+for (i in 1:nrow(range.fraction)) {
+  corr.mesh1[[i]] <- corr.model.tbm(id.node = return.list.mesh1[[1]]$id.node,
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = c(6, 0.5), prior.sigma = prior.sigma, #21,.5; 1;0.1
+                      range.fraction = range.fraction[i,],
+                      range = 5,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+}
+
+dir <- file.path("plots", "corr2points_point1")
+if (!dir.exists(dir)) dir.create(dir)
+
+for (i in 1:length(corr.mesh1)) {
+  fpp <- file.path(dir,(paste0(range.fraction[i,1], ".png")))
+#  png(fpp)
+  local.plot.field_H(corr.mesh1[[i]]$corr.tbm, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T) #, col = "snow3"
+  plot(loc.in.sp, add=T)
+  dev.off()
+}
+
+
+for (i in 1) {
+  fpp <- file.path(dir,(paste0(1, ".png")))
+#  png(fpp)
+  local.plot.field_H(corr.mesh1[[i]]$corr.st, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T) #, col = "snow3"
+  plot(loc.in.sp, add=T)
+  dev.off()
+}
+
+for (i in 1) {
+  fpp <- file.path(dir,(paste0(0.01, ".png")))
+#  png(fpp)
+  local.plot.field_H(corr.mesh1[[i]]$corr.bm, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T, col = "white")
+  plot(loc.in.sp, add=T)
+  dev.off()
+}
+
+
+###points
+for (m in 1:length(return.list.mesh1)) {
+  dir <- file.path("plots", paste0("corr2points_m1point", m))
+  if (!dir.exists(dir)) dir.create(dir)
+  
+  for (i in 1:nrow(range.fraction)) {
+    corr.mesh1[[5*(i-1)+i]] <- corr.model.tbm(id.node = return.list.mesh1[[m]]$id.node,
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = c(6, 0.5), prior.sigma = prior.sigma, #21,.5; 1;0.1
+                      range.fraction = range.fraction[i,],
+                      range = 5,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+    
+    fpp <- file.path(dir,(paste0(range.fraction[i,1], ".png")))
+    png(fpp)
+    local.plot.field_H(corr.mesh1[[5*(i-1)+i]]$corr.tbm, mesh, zlim = c(0.2,1), axes = F)
+    plot(poly.bar.orginal, add=T) #, col = "snow3"
+    plot(loc.in.sp, add=T)
+    dev.off()
+  }
+  fpp <- file.path(dir,(paste0(1, ".png")))
+  png(fpp)
+  local.plot.field_H(corr.mesh1[[5*(m-1)+m]]$corr.st, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T) #, col = "snow3"
+  plot(loc.in.sp, add=T)
+  dev.off()
+  
+  fpp <- file.path(dir,(paste0(0.01, ".png")))
+  png(fpp)
+  local.plot.field_H(corr.mesh1[[5*(m-1)+m]]$corr.bm, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T, col = "white")
+  plot(loc.in.sp, add=T)
+  dev.off()
+
+}
+
+
+```
+
+mesh2
+
+```{r}
+smalldist = 0
+width = c(2, 2)
+max.edge.length = 0.4
+#n = 100
+#set.inla.seed = 602
+x.mid <- 10
+xlim.big <- c(0,20)
+xlim.small <- c(3,17)
+ylim.big <- c(0,20)
+ylim.small <- c(3,17)
+
+poly1 <- local.square.polygon(xlim=c(xlim.big[1]-1, x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2 <- local.square.polygon(xlim=c(x.mid+smalldist/2, xlim.big[2]+1), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+poly.original <- SpatialPolygons(c(poly1@polygons, poly2@polygons))
+  
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2]), 4, 2, byrow = T)
+
+loc1 <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.small[1], xlim.small[2],
+                 xlim.small[2], xlim.small[1],
+                 xlim.small[1], ylim.small[1],
+                 xlim.small[2], ylim.small[2]), 8, 2, byrow = T)
+  
+seg <- inla.sp2segment(poly.original)
+# - Transforms a SpatialPolygon to an "inla polygon"
+mesh <- inla.mesh.2d(loc=loc1, 
+                     interior = seg, 
+                     max.e = max.edge.length, 
+                     offset=1)
+
+tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+  temp = mesh$loc[mesh$graph$tv[t, ], ]
+  posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+# - the positions of the triangle centers
+
+bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar.original <- unlist(bar.original)
+poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 2
+bar2 <- over(poly2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh, barrier.triangles = bar2)
+
+mat <-  inla.barrier.fem.plus(mesh, list(bar1, bar2)) 
+fem <- mat 
+barrier.triangles <- list(bar1, bar2)
+
+# PLOTS
+poly1_h <- local.square.polygon_T(xlim=c(xlim.small[1], x.mid-smalldist/2), 
+                          ylim=x.mid+width[1]*c(-.5, .5))
+
+poly2_h <- local.square.polygon_T(xlim=c(x.mid+smalldist/2, xlim.small[2]), 
+                          ylim=x.mid+width[2]*c(-.5, .5))
+
+loc2 <- matrix(c(3,3, 17,3, 17,17, 3,17), 4, 2, byrow = T)
+
+locp2 <- Polygon(loc2, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp2, poly1_h, poly2_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+
+poly.rect <- SpatialPolygons(list(Polygons(list(poly1_h, poly2_h), '0')))
+poly.rect_sf <- st_as_sf(poly.rect)
+poly.sq <- SpatialPolygons(list(Polygons(list(locp2), '0')))
+poly.sq_sf <- st_as_sf(poly.sq)
+
+sq_bbox <- st_bbox(poly.sq_sf) %>% st_as_sfc()
+poly1_bbox <- st_bbox(poly1) %>% st_as_sfc()
+poly2_bbox <- st_bbox(poly2) %>% st_as_sfc()
+
+loc.out <- matrix(c(xlim.big[1],ylim.big[1], 
+                 xlim.big[2],ylim.big[1], 
+                 xlim.big[2],ylim.big[2], 
+                 xlim.big[1],ylim.big[2],
+                 xlim.big[1],ylim.big[1]), 5, 2, byrow = T)
+loc.out.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.out, FALSE)), '0')))
+
+loc.in <- matrix(c(xlim.small[1], ylim.small[1],
+                   xlim.small[2], xlim.small[1],
+                   xlim.small[2], ylim.small[2],
+                   xlim.small[1], xlim.small[2],
+                   xlim.small[1], ylim.small[1]), 5, 2, byrow = T)
+loc.in.sp <- SpatialPolygons(list(Polygons(list(Polygon(loc.in, FALSE)), '0')))
+
+#plot(loc.out.sp)
+#plot(loc.in.sp)
+
+poly.out <- gDifference(loc.out.sp, loc.in.sp)
+#plot(poly.out, col = alpha("skyblue", 0.5))
+poly.out_sf <- st_as_sf(poly.out)
+```
+
+
+```{r}
+mesh.corrpoints.2 <- mesh
+mesh <- mesh.corrpoints.2
+
+ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7, linetype = "dashed")
+```
+
+```{r}
+width <- 2
+y.mid <- 10
+y.up <- y.mid + (width/2)
+y.low <- y.mid - (width/2)
+
+location <- matrix(c(c(15, 12.5, 10, 10), rep(y.mid, 4)), ncol = 2)
+```
+
+```{r}
+max.edge.length = 0.4
+
+# p1 15.0 11.5
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p1 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+# p2 
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p2 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+##
+# p3 
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[3,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p3 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+##
+# p4 in the middle
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[4,1],y.low), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[4,1],(y.low - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[4,1],(y.low - max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < y.low)[1]]]
+id.node <- id.nodeA[which(A.y.vector < y.low)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.p4 <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+return.list.mesh2 <- list(return.list.p1, return.list.p2, return.list.p3, return.list.p4)
+id.coord.mesh2 <- as.matrix(rbind(return.list.mesh2[[1]]$id.coord, return.list.mesh2[[2]]$id.coord, return.list.mesh2[[3]]$id.coord, return.list.mesh2[[4]]$id.coord))
+
+gg.mesh.cp2 <- ggplot() + 
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7) +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7, linetype = "dashed")
+
+gg.mesh.water.cp2 <- ggplot() +
+  inlabru::gg(mesh) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly2_bbox, color="red", linewidth = 0.7, fill = "white") +
+  geom_sf(data=poly.out_sf, color="black", linewidth = 0.7, fill = "white",  linetype = "dashed") +
+  ylim(c(2, 18)) +
+  xlim(c(2, 18)) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+
+gg.mesh.water.cp2 +
+  geom_sf(data = st_as_sf(SpatialPoints(id.coord.mesh2)), col = "red") 
+
+gg.mesh.water.cp2 +
+  geom_sf(data = st_as_sf(SpatialPoints(id.coord.mesh2)), col = "red") +
+  xlim(c(8, 17)) +
+  ylim(c(5,15))
+```
+
+
+```{r}
+range.fraction <- matrix(c(0.2,0.2, 0.3,0.3, 0.5,0.5, 0.7,0.7, 0.8, 0.8), ncol = 2, byrow = T)
+
+corr.mesh2 <- list()
+
+###points
+for (m in 1:length(return.list.mesh2)) {
+  dir <- file.path("plots", paste0("corr2points_m2point", m))
+  if (!dir.exists(dir)) dir.create(dir)
+  
+  for (i in 1:nrow(range.fraction)) {
+    corr.mesh2[[length(return.list.mesh2)*(i-1)+i]] <- corr.model.tbm(id.node = return.list.mesh2[[m]]$id.node,
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = c(6, 0.5), prior.sigma = prior.sigma, #21,.5; 1;0.1
+                      range.fraction = range.fraction[i,],
+                      range = 5,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+    
+    fpp <- file.path(dir,(paste0(range.fraction[i,1], ".png")))
+    png(fpp)
+    local.plot.field_H(corr.mesh2[[length(return.list.mesh2)*(i-1)+i]]$corr.tbm, mesh, zlim = c(0.2,1), axes = F)
+    plot(poly.bar.orginal, add=T) #, col = "snow3"
+    plot(loc.in.sp, add=T)
+    dev.off()
+  }
+  fpp <- file.path(dir,(paste0(1, ".png")))
+  png(fpp)
+  local.plot.field_H(corr.mesh2[[length(return.list.mesh2)*(m-1)+m]]$corr.st, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T) #, col = "snow3"
+  plot(loc.in.sp, add=T)
+  dev.off()
+  
+  fpp <- file.path(dir,(paste0(0.01, ".png")))
+  png(fpp)
+  local.plot.field_H(corr.mesh2[[length(return.list.mesh2)*(m-1)+m]]$corr.bm, mesh, zlim = c(0.2,1), axes = F)
+  plot(poly.bar.orginal, add=T, col = "white")
+  plot(loc.in.sp, add=T)
+  dev.off()
+
+}
+
+
+
+
+```
+
+```{r}
+return.list <- list(normal.point = return.list.up, barrier.point = return.list.low)
+
+coord.df_norm <- return.list$normal.point$id.coord
+coord.df_bar <- return.list$barrier.point$id.coord
+
+points_nb <- rbind(coord.df_norm, coord.df_bar)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+SpatialPoints(poly_nb@coords)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) + #plot mesh_hb alternatively
+      geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) 
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) +
+  geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) +
+  ylim(c(4,6.5)) +
+  xlim(c(2,5))
+
+return.list.left <- return.list
+coord.df_norm.left <- coord.df_norm
+coord.df_bar.left <- coord.df_bar
+```
+
+```{r}
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.up <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+## lower point, i.e. point in barrier area
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[2,1],(y.up - max.edge.length)), nrow=1, ncol=2))
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector < y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+return.list.low <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+return.list <- list(normal.point = return.list.up, barrier.point = return.list.low)
+
+coord.df_norm <- return.list$normal.point$id.coord
+coord.df_bar <- return.list$barrier.point$id.coord
+
+points_nb <- rbind(coord.df_norm, coord.df_bar)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+SpatialPoints(poly_nb@coords)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) + #plot mesh_hb alternatively
+      geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) 
+
+ggplot(data = pf$poly.water_sf) + 
+      inlabru::gg(pf$mesh) +
+  geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) +
+  ylim(c(4,6.5)) +
+  xlim(c(5.5,7.5))
+
+return.list.right <- return.list
+coord.df_norm.right <- coord.df_norm
+coord.df_bar.right <- coord.df_bar
+```
+
+
+range.fraction <- c(0.3, 0.3)
+id <- id.node.tbm(mesh = mesh, location = location, npoint = nrow(location))
+corr <- list()
+corr[[1]] <- corr.model.tbm(id.node = id$id.node[[1]],
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = prior.range, prior.sigma = prior.sigma,
+                      range.fraction = range.fraction,
+                      range = range,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+corr[[2]] <- corr.model.tbm(id.node = id$id.node[[2]],
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = prior.range, prior.sigma = prior.sigma,
+                      range.fraction = range.fraction,
+                      range = range,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+corr[[3]] <- corr.model.tbm(id.node = id$id.node[[3]],
+                      mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = prior.range, prior.sigma = prior.sigma,
+                      range.fraction = range.fraction,
+                      range = range,
+                      set.inla.seed = set.inla.seed,
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = prior.range,    
+                      prior.sigma.st = prior.sigma)
+
+fpp <- file.path("gif.sel/geom1", paste0("corr2points.pp874.png"))
+#png(fpp)
+par(mfrow = c(3,3))
+##tbm
+local.plot.field_H(corr[[1]]$corr.tbm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[1]][1], id$id.coord[[1]][2], pch = 20)
+plot(poly.bar.orginal, add=T) #, col = "snow3"
+title(main = c("Transparent Barrier Model"))
+
+local.plot.field_H(corr[[2]]$corr.tbm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[2]][1], id$id.coord[[2]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+local.plot.field_H(corr[[3]]$corr.tbm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[3]][1], id$id.coord[[3]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+##bm
+local.plot.field_H(corr[[1]]$corr.bm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[1]][1], id$id.coord[[1]][2], pch = 20)
+plot(poly.bar.orginal, add=T) #, col = "snow3"
+title(main = c("Barrier Model"))
+
+local.plot.field_H(corr[[2]]$corr.bm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[2]][1], id$id.coord[[2]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+local.plot.field_H(corr[[3]]$corr.bm, mesh, zlim = c(0.1,1))
+points(id$id.coord[[3]][1], id$id.coord[[3]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+##st
+local.plot.field_H(corr[[1]]$corr.st, mesh, zlim = c(0.1,1))
+points(id$id.coord[[1]][1], id$id.coord[[1]][2], pch = 20)
+plot(poly.bar.orginal, add=T) #, col = "snow3"
+title(main = c("Stationary Model"))
+
+local.plot.field_H(corr[[2]]$corr.st, mesh, zlim = c(0.1,1))
+points(id$id.coord[[2]][1], id$id.coord[[2]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+local.plot.field_H(corr[[3]]$corr.st, mesh, zlim = c(0.1,1))
+points(id$id.coord[[3]][1], id$id.coord[[3]][2], pch = 20)
+plot(poly.bar.orginal, add=T)
+
+dev.off()
+
+
+
+```{r}
+
+```
+
+
+redo the functions so they are a bit more efficient
+
+```{r}
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+
+local.plot.field = function(field, pal = plasma(50), ...){
+  xlim = c(3, 17); ylim = xlim;
+  proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(300, 300))
+  # - Can project from the mesh onto a 300x300 grid 
+  #   for plots
+  field.proj = inla.mesh.project(proj, field)
+  # - Do the projection
+  image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
+             xlim = xlim, ylim = ylim, col = pal, ...)  
+  # - Use image.plot to get nice colors and legend
+}
+# - This is the appropriate length of the field variable
+
+
+model.tbm <- function(mesh = mesh, 
+                      fem = fem, 
+                      barrier.triangles = barrier.triangles, 
+                      prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                      range.fraction = range.fraction,
+                      range = range,
+                      set.inla.seed = set.inla.seed, # make sure is the same as prev. fx if loc.data = T
+                      loc.data = loc.data, 
+                      sigma.u = 1, sigma.epsilon = 0.2,
+                      poly.original = poly.bar.orginal,
+                      prior.range.st = c(1, 0.5),    
+                      prior.sigma.st = c(1, 0.1),
+                      return.list = TRUE) {
+  
+  # field = TRUE has to be true to start
+  barrier.model <- inla.barrier.pcmatern.plus(mesh, fem, barrier.triangles, 
+                                              prior.range, prior.sigma, 
+                                              range.fraction)
+  # range fraction has to have the same length as barrier triangles
+  Q <- inla.rgeneric.q(barrier.model, "Q", theta = c(log(1), log(range))) #log(1) or log(prior.sigma[1])
+  u <- suppressWarnings(inla.qsample(n=1, Q=Q, seed = set.inla.seed))
+  u <- u[ ,1]
+    
+  A.data <- inla.spde.make.A(mesh, loc.data)
+  #Q from mydiff.r function
+    
+  u.data <- A.data %*% u
+  
+  df <- data.frame(loc.data)
+  names(df) <- c('locx', 'locy')
+  df$y <- drop(sigma.u * u.data + sigma.epsilon * rnorm(nrow(df)))
+  
+    
+  stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+
+    
+  formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+  # - The spatial model component is different from stationary
+  # - The rest of the model setup is the same as in the stationary case!
+  # - - e.g. the inla(...) call below is the same, 
+  #     only this formula is different
+  
+    
+  res.barrier <- inla(formula, data = inla.stack.data(stk),
+                        control.predictor = list(A = inla.stack.A(stk)),
+                        family = 'gaussian',
+                        control.family = list(hyper = list(
+                          prec = list(prior = "pc.prec", fixed = FALSE, param = c(0.2,0.5)))),
+                        control.mode=list(restart=T, theta=c(3.2, 0.4, 1.6)))
+    
+  model.stat <- inla.spde2.pcmatern(mesh, 
+                                    prior.range = c(prior.range.st[1], prior.range.st[2]),
+                                    prior.sigma = c(prior.sigma.st[1], prior.sigma.st[2]))
+  
+  formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+  res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+  if (return.list == TRUE) {
+    
+    list.field <- list(barrier.model = barrier.model, Q = Q, sample = u)
+    pos.bm <- list(df = df, res = res.barrier)
+    pos.st <- list(res = res.stationary)
+    
+    return(list(list.field = list.field, pos.bm = pos.bm, pos.st = pos.st))
+  }
+                     
+}
+
+plot.model.tbm <- 
+  function(trans, 
+           nfrac,
+           max.frac = 1,
+           left.poly = left.poly,
+           poly.bar.orginal = poly.bar.orginal,
+           range = range,
+           fps = 1,
+           set.inla.seed = set.inla.seed,
+                              col=alpha('grey', 0),
+                              plot.points = points(loc.data, 
+                                              pch = 16, 
+                                              cex = 0.8, 
+                                              col=alpha('gray', 0)),
+                              gif.path = "gif/",
+                              pal.field = turbo(50),
+                              pal.pos.mean = turbo(50),
+                              pal.pos.sd = turbo(50),
+                              pal.pos.q25 = turbo(50),
+                              pal.pos.q50 = turbo(50),
+                              pal.pos.q975 = turbo(50),
+                              
+                              pal.pos.mean.st = turbo(50),
+                              pal.pos.sd.st = turbo(50),
+                              pal.pos.q25.st = turbo(50),
+                              pal.pos.q50.st = turbo(50),
+                              pal.pos.q975.st = turbo(50),
+                              ...
+    ){
+  dir_out_f <- file.path(tempdir(), "truefield_gif")
+  dir.create(dir_out_f, recursive = TRUE)
+  
+  # barrier model
+  dir_out_pm <- file.path(tempdir(), "posmean_gif")
+  dir.create(dir_out_pm, recursive = TRUE)
+  
+  dir_out_sd <- file.path(tempdir(), "possd_gif")
+  dir.create(dir_out_sd, recursive = TRUE)
+  
+  dir_out_q25 <- file.path(tempdir(), "posq25_gif")
+  dir.create(dir_out_q25, recursive = TRUE)
+  
+  dir_out_q5 <- file.path(tempdir(), "posq5_gif")
+  dir.create(dir_out_q5, recursive = TRUE)
+  
+  dir_out_q975 <- file.path(tempdir(), "posq975_gif")
+  dir.create(dir_out_q975, recursive = TRUE)
+  
+  # stationary model
+  dir_out_s <- file.path(tempdir(), "statmodel_gif")
+  dir.create(dir_out_s, recursive = TRUE)
+  
+  dir_out_st.sd <- file.path(tempdir(), "st.sd_gif")
+  dir.create(dir_out_st.sd, recursive = TRUE)
+  
+  dir_out_st.q25 <- file.path(tempdir(), "pos.st.q25_gif")
+  dir.create(dir_out_st.q25, recursive = TRUE)
+  
+  dir_out_st.q5 <- file.path(tempdir(), "pos.st.q5_gif")
+  dir.create(dir_out_st.q5, recursive = TRUE)
+  
+  dir_out_st.q975 <- file.path(tempdir(), "pos.st.q975_gif")
+  dir.create(dir_out_st.q975, recursive = TRUE)
+  
+  fr <- (seq(from = left.poly, to = max.frac, length = nfrac)/max.frac)
+  if (fr[1] < left.poly) fr[1] <- left.poly
+
+  for (r in 1:length(trans)) {
+    
+    f <- fr[r]
+    range.fraction <- c(left.poly, f)
+    
+    # SPATIAL FIELD, u
+    fpp <- file.path(dir_out_f, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$list.field$sample, 
+                     main="Spatial posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.field)
+    plot(poly.bar.orginal, add=T, col = col)
+    plot.points
+    dev.off()
+    
+    # POSTERIOR MEAN
+    fpp <- file.path(dir_out_pm, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s$mean, 
+                     main="Spatial mean posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.mean)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS SD
+    fpp <- file.path(dir_out_sd, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s$sd, 
+                     main="Spatial sd posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.sd)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS QUANTILES
+    # 0.025
+    fpp <- file.path(dir_out_q25, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,4], 
+                     main="Spatial 0.025 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q25)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+
+    # 0.5
+    fpp <- file.path(dir_out_q5, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,5], 
+                     main="Spatial 0.5 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q50)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # 0.975
+    fpp <- file.path(dir_out_q975, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,6], 
+                     main="Spatial 0.975 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q975)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # SPATIAL ESTIMATE WITH STATIONARY MODEL
+    fpp <- file.path(dir_out_s, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s$mean,
+                     main="Spatial estimate with the stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.mean.st) 
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS SD st
+    fpp <- file.path(dir_out_st.sd, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s$sd, 
+                     main="Spatial sd posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.sd.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS QUANTILES st
+    # 0.025 st
+    fpp <- file.path(dir_out_st.q25, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,4], 
+                     main="Spatial 0.025 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q25.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+
+    # 0.5 st
+    fpp <- file.path(dir_out_st.q5, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,5], 
+                     main="Spatial 0.5 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q50.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # 0.975 st
+    fpp <- file.path(dir_out_st.q975, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,6], 
+                     main="Spatial 0.975 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q975.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+  }
+  
+    ## bm
+    # SPATIAL FIELD, u
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_f, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "true.field.gif"))
+    
+    # POSTERIOR MEAN
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_pm, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.mean.gif"))
+    
+    #POS SD
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_sd, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.sd.gif"))
+    
+    #POS QUANTILES
+    # 0.025
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q25, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q25.gif"))
+    
+    # 0.5
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q5, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q5.gif"))
+    
+    # 0.975
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q975, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q975.gif"))
+    
+    ## st
+    # u
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_s, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "stat.rnadom.mean.gif"))
+    
+    # st sd
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.sd, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.sd.st.gif"))
+    
+    #POS QUANTILES st
+    # 0.025
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q25, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q25.st.gif"))
+    
+    # 0.5
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q5, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q5.st.gif"))
+    
+    # 0.975
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q975, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q975.st.gif"))
+    
+    unlink(dir_out_f, recursive = T)
+    unlink(dir_out_pm, recursive = T)
+    unlink(dir_out_sd, recursive = T)
+    unlink(dir_out_q25, recursive = T)
+    unlink(dir_out_q5, recursive = T)
+    unlink(dir_out_q975, recursive = T)
+    unlink(dir_out_s, recursive = T)
+    unlink(dir_out_st.sd, recursive = T)
+    unlink(dir_out_st.q25, recursive = T)
+    unlink(dir_out_st.q5, recursive = T)
+    unlink(dir_out_st.q975, recursive = T)
+}
+
+```
+
+```{r}
+range = 3
+nfrac = 5
+max.frac = 10
+left.poly = 0.01
+left.poly.c <- 0.01
+right.poly.c <- 3
+
+fr <- (seq(from = left.poly, 
+          to = max.frac, 
+          length = nfrac)/max.frac) #*range
+tbm.frac <- list()
+
+if (fr[1] < left.poly) fr[1] <- left.poly
+for (r in 1:nfrac) { #
+  f <- fr[r]
+  range.fraction <- c(left.poly, f)
+  tbm.frac[[r]] <- model.tbm(mesh = mesh, fem = fem, 
+              barrier.triangles = barrier.triangles,
+              prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),  
+              range.fraction = c(left.poly, f),
+              range = range,
+              set.inla.seed = set.inla.seed, # make sure is the same as prev. fx if loc.data = T
+              loc.data = loc.data, 
+              sigma.u = 1, sigma.epsilon = 0.2,
+              poly.original = poly.bar.orginal,
+              prior.range.st = c(1, 0.5),
+              prior.sigma.st = c(1, 0.1),
+              return.list = TRUE
+    )
+}
+
+trans <- tbm.frac
+
+plot.model.tbm(trans, 
+           nfrac,
+           max.frac = max.frac,
+           left.poly = 0.01,
+           poly.bar.orginal = poly.bar.orginal,
+           range = range,
+           fps = 1)
+```
+
+
+
+```{r}
+plot.model.tbm.flex <- 
+  function(trans, 
+           nfrac,
+           max.frac = 1,
+           min.r = min.r,
+           poly.bar.orginal = poly.bar.orginal,
+           range = range,
+           fps = 1,
+           set.inla.seed = set.inla.seed,
+                              col=alpha('grey', 0),
+                              plot.points = points(loc.data, 
+                                              pch = 16, 
+                                              cex = 0.8, 
+                                              col=alpha('gray', 0)),
+                              gif.path = "gif/",
+                              pal.field = turbo(50),
+                              pal.pos.mean = turbo(50),
+                              pal.pos.sd = turbo(50),
+                              pal.pos.q25 = turbo(50),
+                              pal.pos.q50 = turbo(50),
+                              pal.pos.q975 = turbo(50),
+                              
+                              pal.pos.mean.st = turbo(50),
+                              pal.pos.sd.st = turbo(50),
+                              pal.pos.q25.st = turbo(50),
+                              pal.pos.q50.st = turbo(50),
+                              pal.pos.q975.st = turbo(50),
+                              ...
+    ){
+  dir_out_f <- file.path(tempdir(), "truefield_gif")
+  dir.create(dir_out_f, recursive = TRUE)
+  
+  # barrier model
+  dir_out_pm <- file.path(tempdir(), "posmean_gif")
+  dir.create(dir_out_pm, recursive = TRUE)
+  
+  dir_out_sd <- file.path(tempdir(), "possd_gif")
+  dir.create(dir_out_sd, recursive = TRUE)
+  
+  dir_out_q25 <- file.path(tempdir(), "posq25_gif")
+  dir.create(dir_out_q25, recursive = TRUE)
+  
+  dir_out_q5 <- file.path(tempdir(), "posq5_gif")
+  dir.create(dir_out_q5, recursive = TRUE)
+  
+  dir_out_q975 <- file.path(tempdir(), "posq975_gif")
+  dir.create(dir_out_q975, recursive = TRUE)
+  
+  # stationary model
+  dir_out_s <- file.path(tempdir(), "statmodel_gif")
+  dir.create(dir_out_s, recursive = TRUE)
+  
+  dir_out_st.sd <- file.path(tempdir(), "st.sd_gif")
+  dir.create(dir_out_st.sd, recursive = TRUE)
+  
+  dir_out_st.q25 <- file.path(tempdir(), "pos.st.q25_gif")
+  dir.create(dir_out_st.q25, recursive = TRUE)
+  
+  dir_out_st.q5 <- file.path(tempdir(), "pos.st.q5_gif")
+  dir.create(dir_out_st.q5, recursive = TRUE)
+  
+  dir_out_st.q975 <- file.path(tempdir(), "pos.st.q975_gif")
+  dir.create(dir_out_st.q975, recursive = TRUE)
+  
+  fr <- (seq(from = min.r, to = max.frac, length = nfrac)/max.frac)
+  if (fr[1] < min.r) fr[1] <- min.r
+
+  for (r in 1:length(trans)) {
+    
+    f <- fr[r]
+    range.fraction <- c(f, f)
+    
+    # SPATIAL FIELD, u
+    fpp <- file.path(dir_out_f, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$list.field$sample, 
+                     main="Spatial posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.field)
+    plot(poly.bar.orginal, add=T, col = col)
+    plot.points
+    dev.off()
+    
+    # POSTERIOR MEAN
+    fpp <- file.path(dir_out_pm, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s$mean, 
+                     main="Spatial mean posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.mean)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS SD
+    fpp <- file.path(dir_out_sd, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s$sd, 
+                     main="Spatial sd posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.sd)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS QUANTILES
+    # 0.025
+    fpp <- file.path(dir_out_q25, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,4], 
+                     main="Spatial 0.025 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q25)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+
+    # 0.5
+    fpp <- file.path(dir_out_q5, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,5], 
+                     main="Spatial 0.5 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q50)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # 0.975
+    fpp <- file.path(dir_out_q975, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.bm$res$summary.random$s[,6], 
+                     main="Spatial 0.975 quantile posterior for Barrier model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q975)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # SPATIAL ESTIMATE WITH STATIONARY MODEL
+    fpp <- file.path(dir_out_s, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s$mean,
+                     main="Spatial estimate with the stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.mean.st) 
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS SD st
+    fpp <- file.path(dir_out_st.sd, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s$sd, 
+                     main="Spatial sd posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.sd.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    #POS QUANTILES st
+    # 0.025 st
+    fpp <- file.path(dir_out_st.q25, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,4], 
+                     main="Spatial 0.025 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q25.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+
+    # 0.5 st
+    fpp <- file.path(dir_out_st.q5, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,5], 
+                     main="Spatial 0.5 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q50.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+    
+    # 0.975 st
+    fpp <- file.path(dir_out_st.q975, paste0(f, ".png"))
+    png(fpp)
+    
+    local.plot.field(trans[[r]]$pos.st$res$summary.random$s[,6], 
+                     main="Spatial 0.975 quantile posterior for Stationary model",
+                     sub = paste("Barrier Model, range.fraction = c(", 
+                               range.fraction[1], ", ", range.fraction[2], ")"),
+                     pal = pal.pos.q975.st)
+    plot(poly.bar.orginal, add=T, col = col)
+    dev.off()
+  }
+  
+    ## bm
+    # SPATIAL FIELD, u
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_f, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "true.field.gif"))
+    
+    # POSTERIOR MEAN
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_pm, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.mean.gif"))
+    
+    #POS SD
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_sd, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.sd.gif"))
+    
+    #POS QUANTILES
+    # 0.025
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q25, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q25.gif"))
+    
+    # 0.5
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q5, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q5.gif"))
+    
+    # 0.975
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_q975, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q975.gif"))
+    
+    ## st
+    # u
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_s, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "stat.rnadom.mean.gif"))
+    
+    # st sd
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.sd, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.sd.st.gif"))
+    
+    #POS QUANTILES st
+    # 0.025
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q25, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q25.st.gif"))
+    
+    # 0.5
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q5, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q5.st.gif"))
+    
+    # 0.975
+    image_write(image = image_animate(
+      image_join(
+        lapply(list.files(dir_out_st.q975, full.names = TRUE), image_read)), 
+      fps = fps), 
+      path = paste0(gif.path, "pos.q975.st.gif"))
+    
+    unlink(dir_out_f, recursive = T)
+    unlink(dir_out_pm, recursive = T)
+    unlink(dir_out_sd, recursive = T)
+    unlink(dir_out_q25, recursive = T)
+    unlink(dir_out_q5, recursive = T)
+    unlink(dir_out_q975, recursive = T)
+    unlink(dir_out_s, recursive = T)
+    unlink(dir_out_st.sd, recursive = T)
+    unlink(dir_out_st.q25, recursive = T)
+    unlink(dir_out_st.q5, recursive = T)
+    unlink(dir_out_st.q975, recursive = T)
+}
+```
+
+```{r}
+range = 3
+nfrac = 5
+max.frac = 10
+min.r = 0.01
+fr <- (seq(from = min.r, 
+          to = max.frac, 
+          length = nfrac)/max.frac) #*range
+tbm.frac <- list()
+
+if (fr[1] < min.r) fr[1] <- min.r
+for (r in 1:nfrac) { #
+  f <- fr[r]
+  range.fraction <- c(f, f)
+  tbm.frac[[r]] <- model.tbm(mesh = mesh, fem = fem, 
+              barrier.triangles = barrier.triangles,
+              prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),  
+              range.fraction = range.fraction,
+              range = range,
+              set.inla.seed = set.inla.seed, # make sure is the same as prev. fx if loc.data = T
+              loc.data = loc.data, 
+              sigma.u = 1, sigma.epsilon = 0.2,
+              poly.original = poly.bar.orginal,
+              prior.range.st = c(1, 0.5),
+              prior.sigma.st = c(1, 0.1),
+              return.list = TRUE
+    )
+}
+
+trans <- tbm.frac
+
+plot.model.tbm.flex(trans, 
+           nfrac,
+           max.frac = max.frac,
+           min.r = 0.01,
+           poly.bar.orginal = poly.bar.orginal,
+           range = range,
+           fps = 1)
+```
+
+
+```{r}
+bm_hp <- list()
+st_hp <- list()
+frac = 5
+
+bm_hp <- rbind(
+data.frame(exp(trans[[1]]$pos.bm$res$summary.hyperpar[3,c(1,3,5)])),
+data.frame(exp(trans[[2]]$pos.bm$res$summary.hyperpar[3,c(1,3,5)])),
+data.frame(exp(trans[[3]]$pos.bm$res$summary.hyperpar[3,c(1,3,5)])),
+data.frame(exp(trans[[4]]$pos.bm$res$summary.hyperpar[3,c(1,3,5)])),
+data.frame(exp(trans[[5]]$pos.bm$res$summary.hyperpar[3,c(1,3,5)])))
+st_hp <- rbind(
+data.frame((trans[[1]]$pos.st$res$summary.hyperpar[2,c(1,3,5)])),
+data.frame((trans[[2]]$pos.st$res$summary.hyperpar[2,c(1,3,5)])),
+data.frame((trans[[3]]$pos.st$res$summary.hyperpar[2,c(1,3,5)])),
+data.frame((trans[[4]]$pos.st$res$summary.hyperpar[2,c(1,3,5)])),
+data.frame((trans[[5]]$pos.st$res$summary.hyperpar[2,c(1,3,5)])))
+
+colnames(bm_hp)[2:3] <- c("0.025quant", "0.975quant")
+rownames(bm_hp) <- c("r1", "r2", "r3", "r4","r5")
+
+colnames(st_hp)[2:3] <- c("0.025quant", "0.975quant")
+rownames(st_hp) <- c("r1", "r2", "r3", "r4","r5")
+#write.csv(rbind(bm_hp,st_hp), "4proposal\\trans2.5.csv")
+#bm_hp.25 = bm_hp 
+#st_hp.25 = st_hp
+```
+
+```{r}
+ggplot() + 
+  inlabru::gg(mesh.seg) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=0) + #alpha color inside rect
+  geom_sf(data=poly1_bbox, fill=NA, color="red", linewidth = 0.7, linetype = "dashed") +
+  geom_sf(data=poly2_bbox, fill=NA, color="red", linewidth = 0.7, linetype = "dashed") +
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7)
+
+ggplot() + 
+  inlabru::gg(mesh.seg) +
+  geom_sf(data =poly.rect_sf,
+          col='black', alpha=1) + #alpha color inside rect
+  geom_sf(data=sq_bbox, fill=NA, color="black", linewidth = 0.7) +
+  geom_sf(data=poly1_bbox, color="black", linewidth = 0.7) +
+  geom_sf(data=poly2_bbox, color="black", linewidth = 0.7) +
+  ylim(c(3, 17)) +
+  xlim(c(3, 17)) 
+```
+
+
+# MESH wiht almost triangular barriers
+mesh.seg_h <- inla.mesh.2d(boundary = poly.water, #? has to have holes=F
+                           interior = seg, 
+                           max.e = max.edge.length, 
+                           offset=1)
+ggplot() + 
+  inlabru::gg(mesh.seg_h)
+
+
+
+
+
+

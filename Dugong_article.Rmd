@@ -1,0 +1,3084 @@
+
+# Dugong Example
+
+## Data
+
+```{r, echo=FALSE, include=FALSE}
+# https://www.flaticon.com/
+dng_icon <- "dng.data/dugong.png"
+
+bathym_ <- raster("dng.data/RSPbathym100m.tif")
+crs_longlat <- CRS("+proj=longlat +datum=WGS84")
+crs_km <- CRS("+proj=utm +zone=39 ellps=WGS84 +units=km")
+bathym_longlat <- projectRaster(bathym_, crs = crs_longlat)
+bathym_km <- projectRaster(bathym_, crs = crs_km)
+
+# Data for all species from helicopter surveys.
+Data_allspp <- readRDS("dng.data/RSP_survey_sightings.rds")
+# Data Incidental Sightings Dugongs
+Data_ISD <- readRDS("dng.data/incidental_sightings_dugongs.rds")
+
+# Data for the 10 different species. 
+# The list number corresponds to sppID, e.g. species 7 is spp[[7]]
+spp_ <- 10
+spp <- list()
+for (s in 1:spp_) {
+  data <- Data_allspp %>% filter(sp_grp_nam == paste0("spp", as.character(s)))
+  spp[[s]] <- data
+}
+
+# Dugong = spp7
+Data_7spp <- spp[[7]]
+
+# bind ISD with Survey helicopter data
+# Dugong is the only one that has data coming from 2 sources.
+Data_ISD_ <- dplyr::select(Data_ISD, c(Lat, Long, geometry)) %>% 
+  rename(lat = Lat, long = Long) %>% 
+  mutate(method = "ISD")
+
+spp7 <- dplyr::select(Data_7spp, c(lat, long, geometry)) %>% 
+  mutate(method = "Survey")
+
+all_dugong <- rbind(Data_ISD_, spp7)
+st_crs(Data_ISD_)
+Data_ISD <- st_transform(Data_ISD_, crs_km)
+cords_Dng.xy <- st_coordinates(Data_ISD)
+cords_Dng.sp <- SpatialPoints(cords_Dng.xy, proj4string = crs_km)
+```
+
+```{r, echo=FALSE, include=FALSE}
+# line 15 "mybath"
+# creating polygons with terra
+bathym <- terra::rast(bathym_longlat)
+plot(bathym)
+bathym_poly <- terra::as.polygons(bathym > -Inf)
+plot(bathym_poly)
+# getting coordinates for all the polygons
+cords <- terra::crds(bathym)
+# getting bathymetry values for all polygons
+vals <- terra::extract(bathym, as.data.frame(cords))
+# create df with cords and bathym values.
+df_bath <- cbind(as.data.frame(cords), vals) %>% rename(bathymetry = layer)
+# filter polygons corresponding to islands and sand patches, select x, y ordinates.
+sea_cords <- df_bath %>% dplyr::filter(bathymetry <= -2) %>% dplyr::select(x,y)
+island_cords <- df_bath %>% dplyr::filter(bathymetry > -2) %>% dplyr::select(x,y)
+```
+
+```{r, echo=FALSE}
+# boundary of the study area:
+# raster w/o the boundary
+raster_study.area <- bathym_longlat
+raster_study.area[raster_study.area < -500] <- NA
+# opposite
+raster_deep.sea<- bathym_longlat
+raster_deep.sea[raster_deep.sea>= -500] <- NA
+# plot
+plot(raster_study.area); plot(raster_deep.sea)
+
+# raster w/o islands
+# islands have r = 0.01
+raster_no.islands <- raster_study.area
+raster_no.islands[raster_no.islands >= -0.5] <- NA # create raster with NA values for islands.
+# opposite
+# boundary and islands have range = 0.01
+raster_islands <- bathym_longlat
+raster_islands[raster_islands < -0.5 & raster_islands >= -500] <- NA 
+# plot
+plot(raster_no.islands); plot(raster_islands)
+raster_b1 <- raster_islands
+
+# raster w/o islands (b1) and b2 
+# 90% between -10 and 0 depth, https://www.nature.com/articles/s41598-021-04412-3
+# ratio = 0.1/0.9 ~ 0.11
+raster_no.b2 <- raster_no.islands
+raster_no.b2[raster_no.b2 < -20] <- NA
+# opposite
+raster_b2 <- raster_no.islands
+raster_b2[raster_b2 >= -20] <- NA
+# plot
+plot(raster_no.b2); plot(raster_b2)
+```
+
+```{r, echo=FALSE, include=FALSE}
+# from terra lib
+# SpatRaster
+spatr_no.island <- terra::rast(raster_no.islands)
+# SpatVector
+spatvect_no.island <- terra::as.polygons(spatr_no.island > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.water <- as(spatvect_no.island, "Spatial") # bathym_sp_df
+# for the mesh I need b2 without NA
+
+# There's one observation that is out of the bathymetry map
+spdf.water@bbox
+Data_ISD <-
+Data_ISD %>% filter(long > spdf.water@bbox[1,1] &long < spdf.water@bbox[1,2] 
+                    &lat > spdf.water@bbox[2,1] &lat < spdf.water@bbox[2,2])
+# data inside the mesh box                  
+cords_Dng.xy <- st_coordinates(Data_ISD)
+cords_Dng.sp <- SpatialPoints(cords_Dng.xy, proj4string = crs_km)
+
+```
+
+#mesh with holes on b2 too
+# from terra lib
+# SpatRaster
+spatr_no.b2 <- terra::rast(raster_no.b2)
+# SpatVector
+spatvect_no.b2 <- terra::as.polygons(spatr_no.b2 > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.nob2 <- as(spatvect_no.b2, "Spatial") # bathym_sp_df
+# for the mesh I need b2 without NA
+
+# There's one observation that is out of the bathymetry map
+spdf.water@bbox
+Data_ISD <-
+Data_ISD %>% filter(long > spdf.water@bbox[1,1] &long < spdf.water@bbox[1,2] 
+                    &lat > spdf.water@bbox[2,1] &lat < spdf.water@bbox[2,2])
+# data inside the mesh box                  
+cords_Dng.xy <- st_coordinates(Data_ISD)
+cords_Dng.sp <- SpatialPoints(cords_Dng.xy, proj4string = crs_km)
+
+sp4msh.nob2 <- spTransform(spdf.nob2, crs_km)
+plot(sp4msh.nob2)
+plot(sp4msh)
+
+
+
+```{r}
+##surrounding the bathymetry map, spde book
+
+pl.sel <- SpatialPolygons(list(Polygons(list(Polygon(
+  cbind(c(-990, -945, -880, -880, -880, -940, -990, -990), 
+        c(2880, 2840, 2840, 2880, 2900, 2987, 2987, 2880)),
+  FALSE)), '0')), proj4string = crs_km)
+plot(pl.sel)
+
+
+spatr_bathym <- terra::rast(bathym_longlat)
+# SpatVector
+spatvect_bathym <- terra::as.polygons(spatr_bathym > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.bathym <- as(spatvect_bathym, "Spatial") # bathym_sp_df
+
+sp4perimeter <- spTransform(spdf.bathym, crs_km)
+poly.water.book <- gDifference(pl.sel, sp4perimeter)
+
+plot(pl.sel, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+
+plot(pl.sel, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+plot(poly.water.book, col = alpha("skyblue", 0.5))
+
+
+sp.b1.ex <- SpatialPolygons(c(sp.b1@polygons, poly.water.book@polygons))
+```
+
+
+# Dugong Example: finer mesh
+
+with `max.edge.length <- 0.6` I get an error when I do the `barrier.model <- inla.barrier.pcmatern.plus()` 
+with `max.edge.length <- 1` it works
+
+```{r, echo=FALSE}
+# I have these 2 points that are very far, the others are inside the "lagoon"
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[1]) = 5
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[2]) = 19
+
+max.edge.length <- 1 #1
+bound.outer <- diff(range(cords_Dng.xy[,1][-c(5, 19)]))/3
+mesh.dng <- inla.mesh.2d(boundary = sp4msh,
+                    max.edge = c(1,5)*max.edge.length,
+                    cutoff = 0.05,
+                    offset = c(max.edge.length, bound.outer))
+#plot(mesh.dng)
+mesh.dng$crs <- crs_km
+
+gg_mesh <- ggplot() +
+  inlabru::gg(mesh.dng) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5)
+```
+
+
+```{r, echo=FALSE}
+# Spatial polygons for barrier 1 = islands, poly1
+spatr.b1 <- terra::rast(raster_b1)
+spatv.b1 <- terra::as.polygons(spatr.b1 > -Inf) # bathym_poly
+spdf.b1_ <- as(spatv.b1, "Spatial") 
+spdf.b1 <- spTransform(spdf.b1_, crs_km)
+
+sp.b1_ <- geometry(spdf.b1)
+n.spb1 <- length(sp.b1_@polygons[[1]]@Polygons)
+idx.spb1 <- seq(1:n.spb1)
+sea_list = lapply(idx.spb1, function(n) Polygon(sp.b1_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+
+sp.b1 <- SpatialPolygons(list(Polygons(sea_list, ID = runif(1)))) #poly1
+
+# Spatial polygons for barrier 2, between -10 and -500, poly2
+spatr.b2 <- terra::rast(raster_b2)
+spatv.b2 <- terra::as.polygons(spatr.b2 > -Inf) # bathym_poly
+spdf.b2_ <- as(spatv.b2, "Spatial") 
+spdf.b2 <- spTransform(spdf.b2_, crs_km)
+
+sp.b2_ <- geometry(spdf.b2)
+n.spb2 <- length(sp.b2_@polygons[[1]]@Polygons)
+idx.spb2 <- seq(1:n.spb2)
+sea_list2 = lapply(idx.spb2, function(n) Polygon(sp.b2_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+sp.b2 <- SpatialPolygons(list(Polygons(sea_list2, ID = runif(1)))) #poly2
+
+sp.bars <- SpatialPolygons(c(sp.b1@polygons, sp.b2@polygons)) #poly.original
+
+# BARRIER TRIANGLES
+tl <- length(mesh.dng$graph$tv[,1])
+# - the number of triangles in the mesh.pp
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+    temp = mesh.dng$loc[mesh.dng$graph$tv[t, ], ]
+    posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+
+# - the positions of the triangle centers
+bars.centers <- over(sp.bars, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bars.centers <- unlist(bars.centers) #bar.original
+poly.bars <- inla.barrier.polygon(mesh.dng, barrier.triangles = bars.centers)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(sp.b1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar1)
+
+# BARRIER 2
+bar2 <- over(sp.b2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar2)
+
+fem <-  inla.barrier.fem.plus(mesh.dng, list(bar1, bar2))
+
+barrier.triangles <- list(bar1, bar2)
+
+plot(mesh.dng, main="Mesh and Omega")
+plot(poly.bars, add=T, col='lightblue')
+
+dmesh <- book.mesh.dual(mesh.dng)
+
+domainSP <- sp4msh
+domainSPsf <- st_as_sf(domainSP)
+dmesh_sf <- st_as_sf(dmesh) 
+st_crs(dmesh_sf) <- crs_km
+# st_crs<- : replacing crs does not reproject data; use st_transform for that
+
+# with sapply
+w <- sapply(1:length(dmesh), function(i) {
+  if (length(st_intersects(dmesh_sf[i, ], domainSPsf)[[1]]) == 1)
+    return(st_area(st_intersection(dmesh_sf[i, ], domainSPsf)))
+  else {
+    return(0)
+  }
+})
+```
+
+```{r}
+water.tri = inla.over_sp_mesh(poly.water, y = mesh.dng, 
+  type = "centroid", ignore.CRS = TRUE)
+num.tri = length(mesh.dng$graph$tv[, 1])
+barrier.tri = setdiff(1:num.tri, water.tri)
+poly.barrier = inla.barrier.polygon(mesh.dng, 
+  barrier.triangles = barrier.tri)
+
+plot(mesh.dng, lwd = 0.5, add = FALSE)
+plot(poly.barrier, border = "red", add = TRUE)
+
+normal = setdiff(1:num.tri, barrier.tri)
+normal[1:30];head(barrier.tri)
+
+normal <- inla.barrier.polygon(mesh.dng, normal)
+
+domainSP_ <- normal
+domainSPsf_ <- st_as_sf(domainSP_)
+dmesh_sf <- st_as_sf(dmesh) 
+st_crs(dmesh_sf) <- crs_km
+st_crs(domainSPsf_) <- crs_km
+# st_crs<- : replacing crs does not reproject data; use st_transform for that
+
+# with sapply
+w_ <- sapply(1:length(dmesh), function(i) {
+  if (length(st_intersects(dmesh_sf[i, ], domainSPsf_)[[1]]) == 1)
+    return(st_area(st_intersection(dmesh_sf[i, ], domainSPsf_)))
+  else {
+    return(0)
+  }
+})
+
+# Saving on object in RData format
+#save(w_, file = "w_.Pois.RData")
+# Save multiple objects
+#save(data1, data2, file = "data.RData")
+# To load the data again
+#load("data.RData")
+save.image()
+
+sum(w_)
+table(w_>0); table(w_==0)
+table(w>0); table(w==0)
+head(w);head(w_)
+pal <- wes_palette("Zissou1")
+colr = rep(c(pal[2]), length = as.numeric(length(w_)))
+colr[w_>0] = pal[5]
+plot(dmesh, col = colr)
+```
+
+## Projection matrices
+
+```{r, echo=FALSE}
+n <- nrow(cords_Dng.xy)
+nv <- mesh.dng$n
+xy <- cords_Dng.xy
+xy.sp <- cords_Dng.sp
+
+y.pp <- rep(0:1, c(nv, n))
+#The exposure vector can be defined as:
+e.pp <- c(w, rep(0, n)) 
+length(y.pp); length(e.pp)
+# The projection matrix is defined in two steps. For the integration points this is just a diagonal matrix because these locations are just the mesh vertices:
+imat <- Diagonal(nv, rep(1, nv))
+# For the observed points, another projection matrix is defined:
+lmat <- inla.spde.make.A(mesh.dng, xy.sp)
+# The entire projection matrix is:
+A.pp <- rbind(imat, lmat)
+
+# We set up the data stack as follows:
+stk.pp <- inla.stack(
+  data = list(y = y.pp, e = e.pp), 
+  A = list(1, A.pp),
+  effects = list(list(b0 = rep(1, nv + n)), list(i = 1:nv)),
+  tag = 'pp')
+
+# Results hold
+#cat('Dimension of A: ', dim(A.pp), '\n')
+#cat('Dimension of projection matrix: ', dim(imat), '\n')
+#cat('Number of mesh points: ', mesh.dng$n, '\n')
+#cat('Number of locations: ', dim(lmat)[1], '\n')
+
+A.pred <- inla.spde.make.A(mesh.dng, mesh.dng$loc[, 1:2])
+
+#Stack for prediction at mesh nodes
+stk.pred <- inla.stack(
+  data = list(y = NA, e = 0),
+  A = list(A.pred, 1),
+  effects =list(list(i = 1:mesh.dng$n), list(b0 = rep(1, nrow(A.pred)))), #data = list(y = rep(NA, nrow(coop)), e = rep(0, nrow(coop))),
+  tag = 'pred')
+
+joint.stk <- inla.stack(stk.pp, stk.pred)
+idx.pred <- inla.stack.index(joint.stk, 'pred')$data
+```
+
+whit w_
+
+```{r}
+#The exposure vector can be defined as:
+e.pp_ <- c(w_, rep(0, n)) 
+length(y.pp); length(e.pp_)
+
+# We set up the data stack as follows:
+stk.pp <- inla.stack(
+  data = list(y = y.pp, e = e.pp_), 
+  A = list(1, A.pp),
+  effects = list(list(b0 = rep(1, nv + n)), list(i = 1:nv)),
+  tag = 'pp')
+
+# Results hold
+#cat('Dimension of A: ', dim(A.pp), '\n')
+#cat('Dimension of projection matrix: ', dim(imat), '\n')
+#cat('Number of mesh points: ', mesh.dng$n, '\n')
+#cat('Number of locations: ', dim(lmat)[1], '\n')
+
+A.pred <- inla.spde.make.A(mesh.dng, mesh.dng$loc[, 1:2])
+
+#Stack for prediction at mesh nodes
+stk.pred <- inla.stack(
+  data = list(y = NA, e = 0),
+  A = list(A.pred, 1),
+  effects =list(list(i = 1:mesh.dng$n), list(b0 = rep(1, nrow(A.pred)))), #data = list(y = rep(NA, nrow(coop)), e = rep(0, nrow(coop))),
+  tag = 'pred')
+
+joint.stk <- inla.stack(stk.pp, stk.pred)
+idx.pred <- inla.stack.index(joint.stk, 'pred')$data
+```
+
+```{r}
+length(formula)
+j = 17
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[1,1],x[1,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+
+```
+
+
+## Stationary SPDE model
+
+The prior for the hyper-parameter $r$ is calibrated to have a median around half of the study area
+and $\sigma_u$ is chosen in order to have probability 0.01 to have values greater than 1.
+
+```{r, echo=FALSE}
+# 0.5*diff(range(cords_Dng.xy[,2])) = 40.94401
+# I have these 2 points that are very far, the others are inside the "lagoon"
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[1]) = 5
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[2]) = 19
+0.5*diff(range(cords_Dng.xy[,2][-c(5, 19)])) #= 21.09291
+0.25*diff(range(cords_Dng.xy[,2][-c(5, 19)])) #= 10.54646
+
+formula <- list()
+model <- list()
+res.dng <- list()
+range.marginal <- list()
+b0.marginal <- list()
+sigma.marginal <- list()
+marginal <- list()
+gg.range <- list()
+gg.b0 <- list()
+gg.sigma <- list()
+res.dng.pred <- list()
+range.marginal.pred <- list()
+b0.marginal.pred <- list()
+sigma.marginal.pred <- list()
+marginal.pred <- list()
+gg.range.pred <- list()
+gg.b0.pred <- list()
+gg.sigma.pred <- list()
+
+
+prior.range <- c(11, .5)
+prior.sigma <- c(1, 0.1)
+
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+
+save.image()
+
+for (j in 1:nrow(x)) { #i did j in 1:2, and then j in 3:nrow(x) so it wouldnt get stuck
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[j,1],x[j,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+}
+
+for (j in 1:nrow(x)) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+}
+
+for (j in 1:nrow(x)) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y)) 
+}
+```
+
+```{r}
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8, 0.2,0.2, 0.4,0.4, 0.7,0.7), ncol = 2, byrow = TRUE)
+
+for (j in 9:11) { #i did j in 1:2, and then j in 3:nrow(x) so it wouldnt get stuck
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[j,1],x[j,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+}
+
+for (j in 9:11) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+}
+
+for (j in 9:11) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y)) 
+}
+```
+
+```{r, eval=FALSE, echo=FALSE}
+marginals.pp <- marginal[[1]]
+
+for(j in 1:(nrow(x)-1)) {
+  marginals.pp <- rbind(marginals.pp, marginal[[j+1]])
+ }
+
+df <- marginals.pp %>% dplyr::filter(par == "range")
+gg.range.pp <- 
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("range") +
+  ylab("density") +
+  xlim(c(0,30))
+
+df <- marginals.pp %>% dplyr::filter(par == "b0")
+gg.b0.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("b0") +
+  ylab("density") 
+
+df <- marginals.pp %>% dplyr::filter(par == "sigma")
+gg.sigma.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("sigma") +
+  ylab("density") 
+
+gridExtra::grid.arrange(gg.range.pp, gg.b0.pp, gg.sigma.pp, nrow = 3, ncol = 1)
+# separate the 3 "base models" from the transparent bm, like in the last presentation
+# lines should have different type
+```
+
+
+
+#something is going very bad here
+except for [[1]] and [[2]] all the plots are wrong
+#leave this for a bit
+ok when I saw the priors, the ones for the tbm have really long tails.
+
+
+what actually worked was using the same range fraction for both barriers, I don't understand why doesnt it work for different range fractions. Next, use different priors and same and different range fractions
+
+```{r}
+#first trial just change priors
+x <- matrix(c(0.01,1), ncol = 2, byrow = TRUE)
+
+prior.range <- matrix(c(21,.5, 21,0.9, 41,0.9, 3,.5, 6,.5), ncol = 2, byrow = TRUE)
+prior.sigma <- c(1, 0.1)
+
+for (j in 12:(nrow(prior.range)+12-1)) { #i did j in 1:2, and then j in 3:nrow(x) so it wouldnt get stuck
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = c(prior.range[j-11,1], prior.range[j-11,2]),
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[1,1],x[1,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+}
+
+for (j in 12:(nrow(prior.range)+12-1)) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+}
+
+for (j in 12:(nrow(prior.range)+12-1)) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y)) 
+}
+```
+
+
+```{r}
+marginals.pp_ <- marginal[[12]]
+for(j in 13:(nrow(prior.range)+12-1)) {
+  marginals.pp_ <- rbind(marginals.pp_, marginal[[j]])
+ }
+
+df <- marginals.pp_ %>% dplyr::filter(par == "range") 
+gg.range.pp <- 
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("range") +
+  ylab("density") 
+#  xlim(c(0,30))
+
+df <- marginals.pp_ %>% dplyr::filter(par == "b0")
+gg.b0.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("b0") +
+  ylab("density") 
+
+df <- marginals.pp_ %>% dplyr::filter(par == "sigma")
+gg.sigma.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("sigma") +
+  ylab("density") 
+
+gridExtra::grid.arrange(gg.range.pp, gg.b0.pp, gg.sigma.pp, nrow = 3, ncol = 1)
+# separate the 3 "base models" from the transparent bm, like in the last presentation
+# lines should have different type
+```
+
+```{r}
+marginals.pp_ <- marginal[[9]]
+for(j in 10:11) {
+  marginals.pp_ <- rbind(marginals.pp_, marginal[[j]])
+ }
+
+df <- marginals.pp_ %>% dplyr::filter(par == "range") 
+gg.range.pp <- 
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("range") +
+  ylab("density") 
+#  xlim(c(0,30))
+
+df <- marginals.pp_ %>% dplyr::filter(par == "b0")
+gg.b0.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("b0") +
+  ylab("density") 
+
+df <- marginals.pp_ %>% dplyr::filter(par == "sigma")
+gg.sigma.pp <-
+ggplot(data = df , aes(x = val, y = density, color = model)) +
+  geom_line() +
+  ggsci::scale_color_ucscgb() +
+  xlab("sigma") +
+  ylab("density") 
+
+gridExtra::grid.arrange(gg.range.pp, gg.b0.pp, gg.sigma.pp, nrow = 3, ncol = 1)
+# separate the 3 "base models" from the transparent bm, like in the last presentation
+# lines should have different type
+
+```
+
+```{r}
+for (j in 1:length(range.marginal)) {
+  
+  range.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[2]]))
+  
+  b0.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng[[j]]$marginals.fixed[[1]])),
+    res.dng[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng[[j]]$marginals.hyperpar[[1]]))
+
+
+  marginal[[j]] <- as.data.frame(
+    rbind(range.marginal[[j]], b0.marginal[[j]], sigma.marginal[[j]]))
+
+  colnames(marginal[[j]])[1:2] <- c("model", "par")
+
+  marginal[[j]]  <- marginal[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+  
+  range.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    rep("range", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[2]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[2]]))
+
+  b0.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    rep("b0", nrow(res.dng.pred[[j]]$marginals.fixed[[1]])),
+    res.dng.pred[[j]]$marginals.fixed[[1]])
+
+  sigma.marginal.pred[[j]] <- cbind(
+    rep(paste0("model", j), nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    rep("sigma", nrow(inla.tmarginal(function(x) exp(x), 
+                                  res.dng.pred[[j]]$marginals.hyperpar[[1]]))),
+    inla.tmarginal(function(x) exp(x), res.dng.pred[[j]]$marginals.hyperpar[[1]]))
+
+  marginal.pred[[j]] <- as.data.frame(
+    rbind(range.marginal.pred[[j]], b0.marginal.pred[[j]], sigma.marginal.pred[[j]]))
+
+  colnames(marginal.pred[[j]])[1:2] <- c("model", "par")
+
+  marginal.pred[[j]]  <- marginal.pred[[j]] %>% 
+    dplyr::mutate(val = as.numeric(x), density = as.numeric(y)) %>% 
+    dplyr::select(!c(x, y))
+}
+```
+
+EVERYTHING AGAIN FOR DIFFERENT MESH SO local.plot.field makes sense
+
+# Dugong Example
+
+For w0, and [[17]]
+```{r, echo=FALSE}
+# boundary of the study area:
+# raster w/o the boundary
+raster_study.area <- bathym_longlat
+raster_study.area[raster_study.area < -500] <- NA
+# opposite
+raster_deep.sea<- bathym_longlat
+raster_deep.sea[raster_deep.sea>= -500] <- NA
+# plot
+plot(raster_study.area); plot(raster_deep.sea)
+
+# raster w/o islands
+# islands have r = 0.01
+raster_no.islands <- raster_study.area
+raster_no.islands[raster_no.islands >= 0] <- NA # create raster with NA values for islands.
+# opposite
+# boundary and islands have range = 0.01
+raster_islands <- bathym_longlat
+raster_islands[raster_islands < 0 & raster_islands >= -500] <- NA 
+# plot
+plot(raster_no.islands); plot(raster_islands)
+raster_b1 <- raster_islands
+
+# raster w/o islands (b1) and b2 
+# 90% between -10 and 0 depth, https://www.nature.com/articles/s41598-021-04412-3
+# ratio = 0.1/0.9 ~ 0.11
+raster_no.b2 <- raster_no.islands
+raster_no.b2[raster_no.b2 < -20] <- NA
+# opposite
+raster_b2 <- raster_no.islands
+raster_b2[raster_b2 >= -20] <- NA
+# plot
+plot(raster_no.b2, axes = F); plot(raster_b2)
+
+fpp <- file.path(paste0(path, "/", "fr", 0, ".png"))
+png(fpp)
+
+
+#png("plots/area1.png")
+plot(bathym_longlat, axes = F)
+title("Entire Study Area")
+dev.off()
+
+#png("plots/area2.png")
+plot(raster_no.b2, axes = F)
+title("Normal Area")
+dev.off()
+
+#png("plots/area3.png")
+plot(raster_islands, axes = F)
+title("Barrier 1: Impermeable Barrier")
+dev.off()
+
+#png("plots/area4.png")
+plot(raster_b2, axes = F)
+title("Barrier 2: Transparent Barrier")
+dev.off()
+```
+
+```{r, echo=FALSE, include=FALSE}
+# from terra lib
+# SpatRaster
+spatr_no.island <- terra::rast(raster_no.islands)
+# SpatVector
+spatvect_no.island <- terra::as.polygons(spatr_no.island > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.water <- as(spatvect_no.island, "Spatial") # bathym_sp_df
+# for the mesh I need b2 without NA
+
+# There's one observation that is out of the bathymetry map
+spdf.water@bbox
+Data_ISD <-
+Data_ISD %>% filter(long > spdf.water@bbox[1,1] &long < spdf.water@bbox[1,2] 
+                    &lat > spdf.water@bbox[2,1] &lat < spdf.water@bbox[2,2])
+# data inside the mesh box                  
+cords_Dng.xy <- st_coordinates(Data_ISD)
+cords_Dng.sp <- SpatialPoints(cords_Dng.xy, proj4string = crs_km)
+
+
+sp4msh <- spTransform(spdf.water, crs_km)
+spdf.water <- sp4msh
+```
+
+
+```{r, eval=FALSE}
+#mesh with holes on b2 too
+# from terra lib
+# SpatRaster
+spatr_no.b2 <- terra::rast(raster_no.b2)
+# SpatVector
+spatvect_no.b2 <- terra::as.polygons(spatr_no.b2 > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.nob2 <- as(spatvect_no.b2, "Spatial") # bathym_sp_df
+# to maybe do the mesh with this?
+##surrounding the bathymetry map, spde book
+pl.sel <- SpatialPolygons(list(Polygons(list(Polygon(
+  cbind(c(-978, -945, -880, -880, -940, -978, -978), 
+        c(2880, 2843, 2880, 2900, 2987, 2987, 2880)),
+  FALSE)), '0')), proj4string = crs_km)
+plot(pl.sel)
+
+pl.sel <- SpatialPolygons(list(Polygons(list(Polygon(
+  cbind(c(-990, -945, -880, -880, -880, -940, -990, -990), 
+        c(2880, 2840, 2840, 2880, 2900, 2987, 2987, 2880)),
+  FALSE)), '0')), proj4string = crs_km)
+plot(pl.sel)
+
+pl.sel <- SpatialPolygons(list(Polygons(list(Polygon(
+  cbind(c(-1200, -800, -800, -1200, -1200), 
+        c(2800, 2800, 3000, 3000, 2800)),
+  FALSE)), '0')), proj4string = crs_km)
+
+
+
+spatr_bathym <- terra::rast(bathym_longlat)
+# SpatVector
+spatvect_bathym <- terra::as.polygons(spatr_bathym > -Inf) # bathym_poly
+#SpatialPolygonsDataFrame 
+spdf.bathym <- as(spatvect_bathym, "Spatial") # bathym_sp_df
+
+sp4perimeter <- spTransform(spdf.bathym, crs_km)
+poly.water.book <- gDifference(pl.sel, sp4perimeter)
+
+plot(pl.sel, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+
+plot(pl.sel, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+plot(poly.water.book, col = alpha("skyblue", 0.5))
+
+```
+
+
+#[[17]] I changed the land to be > 0 not > -0.5, but it doesn't make a difference
+
+```{r, echo=FALSE}
+# I have these 2 points that are very far, the others are inside the "lagoon"
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[1]) = 5
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[2]) = 19
+
+max.edge.length <- 1 #1
+bound.outer <- diff(range(cords_Dng.xy[,1][-c(5, 19)]))/3
+mesh.dng <- inla.mesh.2d(boundary = sp4msh,
+                    max.edge = c(1,5)*max.edge.length,
+                    cutoff = 0.05,
+                    offset = c(max.edge.length, bound.outer))
+#plot(mesh.dng)
+mesh.dng$crs <- crs_km
+
+gg_mesh <- ggplot() +
+  inlabru::gg(mesh.dng) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5)
+```
+
+```{r}
+# Spatial polygons for barrier 1 = islands, poly1
+spatr.b1 <- terra::rast(raster_b1)
+spatv.b1 <- terra::as.polygons(spatr.b1 > -Inf) # bathym_poly
+spdf.b1_ <- as(spatv.b1, "Spatial") 
+spdf.b1 <- spTransform(spdf.b1_, crs_km)
+
+sp.b1_ <- geometry(spdf.b1)
+n.spb1 <- length(sp.b1_@polygons[[1]]@Polygons)
+idx.spb1 <- seq(1:n.spb1)
+sea_list = lapply(idx.spb1, function(n) Polygon(sp.b1_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+
+sp.b1 <- SpatialPolygons(list(Polygons(sea_list, ID = runif(1)))) #poly1
+
+# Spatial polygons for barrier 2, between -10 and -500, poly2
+spatr.b2 <- terra::rast(raster_b2)
+spatv.b2 <- terra::as.polygons(spatr.b2 > -Inf) # bathym_poly
+spdf.b2_ <- as(spatv.b2, "Spatial") 
+spdf.b2 <- spTransform(spdf.b2_, crs_km)
+
+sp.b2_ <- geometry(spdf.b2)
+n.spb2 <- length(sp.b2_@polygons[[1]]@Polygons)
+idx.spb2 <- seq(1:n.spb2)
+sea_list2 = lapply(idx.spb2, function(n) Polygon(sp.b2_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+sp.b2 <- SpatialPolygons(list(Polygons(sea_list2, ID = runif(1)))) #poly2
+
+sp.bars <- SpatialPolygons(c(sp.b1@polygons, sp.b2@polygons)) #poly.original
+
+# BARRIER TRIANGLES
+tl <- length(mesh.dng$graph$tv[,1])
+# - the number of triangles in the mesh.pp
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+    temp = mesh.dng$loc[mesh.dng$graph$tv[t, ], ]
+    posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+
+# - the positions of the triangle centers
+bars.centers <- over(sp.bars, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bars.centers <- unlist(bars.centers) #bar.original
+poly.bars <- inla.barrier.polygon(mesh.dng, barrier.triangles = bars.centers)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(sp.b1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar1)
+
+# BARRIER 2
+bar2 <- over(sp.b2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar2)
+
+fem <-  inla.barrier.fem.plus(mesh.dng, list(bar1, bar2))
+
+barrier.triangles <- list(bar1, bar2)
+
+#plot(mesh.dng, main="Mesh and Omega")
+#plot(poly.bars, add=T, col='lightblue')
+
+dmesh <- book.mesh.dual(mesh.dng)
+
+domainSP <- sp4msh
+domainSPsf <- st_as_sf(domainSP)
+dmesh_sf <- st_as_sf(dmesh) 
+st_crs(dmesh_sf) <- crs_km
+# st_crs<- : replacing crs does not reproject data; use st_transform for that
+
+# with sapply
+#w0 <- sapply(1:length(dmesh), function(i) {
+  if (length(st_intersects(dmesh_sf[i, ], domainSPsf)[[1]]) == 1)
+    return(st_area(st_intersection(dmesh_sf[i, ], domainSPsf)))
+  else {
+    return(0)
+  }
+})
+
+table(w0>0); table(w0==0)
+table(w_>0); table(w_==0)
+table(w>0); table(w==0)
+head(w);head(w_);head(w0)
+
+```
+
+
+#Now bound.outer for mesh = 50 instead of 16
+
+```{r, echo=FALSE}
+# I have these 2 points that are very far, the others are inside the "lagoon"
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[1]) = 5
+#which(cords_Dng.xy[,2]==range(cords_Dng.xy[,2])[2]) = 19
+
+max.edge.length <- 1 #1
+bound.outer <- diff(range(cords_Dng.xy[,1][-c(5, 19)]))/3
+mesh.dng <- inla.mesh.2d(boundary = sp4msh,
+                    max.edge = c(1,5)*max.edge.length,
+                    cutoff = 0.05,
+                    offset = c(max.edge.length, 50))
+#plot(mesh.dng)
+mesh.dng$crs <- crs_km
+
+gg_mesh <- ggplot() +
+  inlabru::gg(mesh.dng) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5)
+```
+
+
+```{r, echo=FALSE}
+# Spatial polygons for barrier 1 = islands, poly1
+spatr.b1 <- terra::rast(raster_b1)
+spatv.b1 <- terra::as.polygons(spatr.b1 > -Inf) # bathym_poly
+spdf.b1_ <- as(spatv.b1, "Spatial") 
+spdf.b1 <- spTransform(spdf.b1_, crs_km)
+
+sp.b1_ <- geometry(spdf.b1)
+n.spb1 <- length(sp.b1_@polygons[[1]]@Polygons)
+idx.spb1 <- seq(1:n.spb1)
+sea_list = lapply(idx.spb1, function(n) Polygon(sp.b1_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+
+sp.b1 <- SpatialPolygons(list(Polygons(sea_list, ID = runif(1)))) #poly1
+
+# Spatial polygons for barrier 2, between -10 and -500, poly2
+spatr.b2 <- terra::rast(raster_b2)
+spatv.b2 <- terra::as.polygons(spatr.b2 > -Inf) # bathym_poly
+spdf.b2_ <- as(spatv.b2, "Spatial") 
+spdf.b2 <- spTransform(spdf.b2_, crs_km)
+
+sp.b2_ <- geometry(spdf.b2)
+n.spb2 <- length(sp.b2_@polygons[[1]]@Polygons)
+idx.spb2 <- seq(1:n.spb2)
+sea_list2 = lapply(idx.spb2, function(n) Polygon(sp.b2_@polygons[[1]]@Polygons[[n]]@coords, hole = F)) 
+sp.b2 <- SpatialPolygons(list(Polygons(sea_list2, ID = runif(1)))) #poly2
+
+sp.bars <- SpatialPolygons(c(sp.b1@polygons, sp.b2@polygons)) #poly.original
+
+# BARRIER TRIANGLES
+tl <- length(mesh.dng$graph$tv[,1])
+# - the number of triangles in the mesh.pp
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+    temp = mesh.dng$loc[mesh.dng$graph$tv[t, ], ]
+    posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+
+posTri <- SpatialPoints(posTri)
+
+# - the positions of the triangle centers
+bars.centers <- over(sp.bars, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bars.centers <- unlist(bars.centers) #bar.original
+poly.bars <- inla.barrier.polygon(mesh.dng, barrier.triangles = bars.centers)
+# - the Barrier model's polygon
+# - in most cases this should be the same as poly.original
+
+# BARRIER 1
+bar1 <- over(sp.b1, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar1)
+
+# BARRIER 2
+bar2 <- over(sp.b2, SpatialPoints(posTri), returnList=T)
+# - checking which mesh.dng triangles are inside the barrier area
+bar2 <- unlist(bar2)
+poly.bar2 <- inla.barrier.polygon(mesh.dng, barrier.triangles = bar2)
+
+fem <-  inla.barrier.fem.plus(mesh.dng, list(bar1, bar2))
+
+barrier.triangles <- list(bar1, bar2)
+
+#plot(mesh.dng, main="Mesh and Omega")
+#plot(poly.bars, add=T, col='lightblue')
+
+dmesh <- book.mesh.dual(mesh.dng)
+
+domainSP <- sp4msh
+domainSPsf <- st_as_sf(domainSP)
+dmesh_sf <- st_as_sf(dmesh) 
+st_crs(dmesh_sf) <- crs_km
+# st_crs<- : replacing crs does not reproject data; use st_transform for that
+
+# with sapply
+#w50 <- sapply(1:length(dmesh), function(i) {
+  if (length(st_intersects(dmesh_sf[i, ], domainSPsf)[[1]]) == 1)
+    return(st_area(st_intersection(dmesh_sf[i, ], domainSPsf)))
+  else {
+    return(0)
+  }
+#})
+
+# Saving on object in RData format
+#save(w50, file = "w50.Pois.RData")
+# Save multiple objects
+#save(data1, data2, file = "data.RData")
+# To load the data again
+#load("data.RData")
+save.image()
+
+sum(w50)
+table(w50>0); table(w50==0)
+table(w0>0); table(w0==0)
+table(w_>0); table(w_==0)
+table(w>0); table(w==0)
+
+pal <- wes_palette("Zissou1")
+colr = rep(c(pal[2]), length = as.numeric(length(w50)))
+colr[w50>0] = pal[5]
+plot(dmesh, col = colr)
+
+```
+
+## Projection matrices, this is for w50 but I did the same for w0
+
+```{r, echo=FALSE}
+n <- nrow(cords_Dng.xy)
+nv <- mesh.dng$n
+xy <- cords_Dng.xy
+xy.sp <- cords_Dng.sp
+
+y.pp <- rep(0:1, c(nv, n))
+#The exposure vector can be defined as:
+e.pp <- c(w50, rep(0, n)) 
+length(y.pp); length(e.pp)
+# The projection matrix is defined in two steps. For the integration points this is just a diagonal matrix because these locations are just the mesh vertices:
+imat <- Diagonal(nv, rep(1, nv))
+# For the observed points, another projection matrix is defined:
+lmat <- inla.spde.make.A(mesh.dng, xy.sp)
+# The entire projection matrix is:
+A.pp <- rbind(imat, lmat)
+
+# We set up the data stack as follows:
+stk.pp <- inla.stack(
+  data = list(y = y.pp, e = e.pp), 
+  A = list(1, A.pp),
+  effects = list(list(b0 = rep(1, nv + n)), list(i = 1:nv)),
+  tag = 'pp')
+
+# Results hold
+#cat('Dimension of A: ', dim(A.pp), '\n')
+#cat('Dimension of projection matrix: ', dim(imat), '\n')
+#cat('Number of mesh points: ', mesh.dng$n, '\n')
+#cat('Number of locations: ', dim(lmat)[1], '\n')
+
+A.pred <- inla.spde.make.A(mesh.dng, mesh.dng$loc[, 1:2])
+
+#Stack for prediction at mesh nodes
+stk.pred <- inla.stack(
+  data = list(y = NA, e = 0),
+  A = list(A.pred, 1),
+  effects =list(list(i = 1:mesh.dng$n), list(b0 = rep(1, nrow(A.pred)))), #data = list(y = rep(NA, nrow(coop)), e = rep(0, nrow(coop))),
+  tag = 'pred')
+
+joint.stk <- inla.stack(stk.pp, stk.pred)
+idx.pred <- inla.stack.index(joint.stk, 'pred')$data
+```
+
+
+
+```{r}
+#whit w50 [[19]]
+j = 19
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[3,1],x[3,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+
+```
+
+```{r}
+local.plot.field.book <- function(field, xlim, ylim, ...){
+  if (missing(xlim)) xlim = poly.water@bbox[1, ] 
+  if (missing(ylim)) ylim = poly.water@bbox[2, ]
+  proj = inla.mesh.projector(mesh, xlim = xlim,
+    ylim = ylim, dims=c(300, 300))
+  field.proj = inla.mesh.project(proj, field)
+  image.plot(list(x = proj$x, y = proj$y, z = field.proj),
+    xlim = xlim, ylim = ylim, ...)
+}
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+mesh = mesh.dng
+#plot number:
+#1
+local.plot.field.book(
+  res.dng.pred[[8]]$summary.random$i$mean, zlim = c(-50, 50))
+#2
+local.plot.field.book(
+  res.dng.pred[[3]]$summary.random$i$mean, zlim = c(-20, 20))
+points(xy[,1], xy[,2], pch = 20)
+#3
+local.plot.field.book(
+  res.dng[[1]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#4
+local.plot.field.book(
+  res.dng[[2]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#5
+local.plot.field.book(
+  res.dng[[7]]$summary.random$i$mean, zlim = c(0, 10))
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.bar2, add = TRUE, col = "gray")
+# maybe it's because I have observations inside the barrier area? no otherwise I would see red in[[2]]
+# I need to get rid of whatever is happening inside the barriers
+
+#6
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.bar2, add = TRUE, col = "gray")
+#7
+local.plot.field.book(
+  res.dng[[9]]$summary.random$i$sd)
+#8
+local.plot.field.book(
+  res.dng[[9]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#9
+local.plot.field.book(
+  res.dng[[10]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#10
+local.plot.field.book(
+  res.dng.pred[[9]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#11
+local.plot.field.book(
+  res.dng[[9]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#12
+local.plot.field.book(
+  res.dng[[11]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+#13
+local.plot.field.book(
+  res.dng[[16]]$summary.random$i$sd)
+points(xy[,1], xy[,2], pch = 20)
+#14
+local.plot.field.book(
+  res.dng.pred[[2]]$summary.random$i$mean)
+
+#15
+# Posterior mean
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "mean"],
+#  zlim = c(-30.22, 30),
+  main = "", asp = 1, col = book.color.c(100),
+  axes = FALSE)
+#16
+# Posterior mode
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "mode"],
+  main = "", asp = 1, col = book.color.c(100),
+  axes = FALSE)
+#17
+# Posterior sd
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "sd"],
+  asp = 1,
+  col = book.color.c2(100), axes = FALSE)
+#18
+# Posterior 97.5 quantile
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "0.975quant"],
+  asp = 1,
+  col = book.color.c2(100), axes = FALSE)
+#19
+# Posterior 0.5 quantile
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "0.5quant"],
+  asp = 1,
+  col = book.color.c2(100), axes = FALSE)
+#20
+# Posterior 0.025 quantile
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "0.025quant"],
+  asp = 1,
+  col = book.color.c2(100), axes = FALSE)
+#21
+# Posterior mean
+local.plot.field.book(
+  res.dng.pred[[10]]$summary.fitted.values[idx.pred, "mean"],
+#  zlim = c(-30.22, 30),
+  main = "", asp = 1, col = book.color.c(100),
+  axes = FALSE)
+#22
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$sd, zlim = c(0,20))
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "gray")
+#23
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$sd, zlim = c(0,20))
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar2, add = TRUE, col = "gray")
+#24
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$mean, zlim = c(0,20))
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "gray")
+#25
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$mean, zlim = c(0,20))
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar2, add = TRUE, col = "gray")
+#26
+local.plot.field.book(
+  res.dng[[4]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "pink")
+plot(poly.bar2, add = TRUE, col = "gray")
+#27
+local.plot.field.book(
+  res.dng[[17]]$summary.random$i$mean)
+points(xy[,1], xy[,2], pch = 20)
+plot(poly.bar1, add = TRUE, col = "pink")
+plot(poly.bar2, add = TRUE, col = "gray")
+
+mesh <- mesh.dng
+poly.water <- spdf.water
+local.plot.field.book(
+  res.dng[[18]]$summary.random$i$mean, zlim = c(0, 50))
+plot(poly.bar2, add = TRUE, col = "pink")
+plot(poly.bar1, add = TRUE, col = "gray")
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+summary(res.dng[[19]]$summary.random$i$mean)
+mesh <- mesh.dng
+poly.water <- spdf.water
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean,  zlim = c(15, 25))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean, zlim = c(5, 25))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+#the zones that have very high value are the ones that are enclosed by barriers 
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean)
+
+exp(res.dng[[19]]$summary.hyperpar)
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean)
+plot(poly.bar1, add = TRUE, col = "skyblue")
+plot(poly.bar2, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+#vals "0.5quant"
+#wo zlim
+local.plot.field.book(
+  res.dng[[19]]$summary.fitted.values[idx.pred, "0.5quant"])
+
+local.plot.field.book(
+  res.dng[[19]]$summary.fitted.values[idx.pred, "0.5quant"], zlim = c(0, 1000))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[19]]$summary.fitted.values[idx.pred, "0.5quant"], zlim = c(0, 10))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+#vals "mean"
+#wo zlim
+local.plot.field.book(
+  res.dng.pred[[19]]$summary.fitted.values[idx.pred, "mean"], zlim = c(0, 100000))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+
+
+```
+
+
+The only ones that work are when both range fractions are the same 
+7 is weirdly good
+8:12, 14:21 good
+
+```{r}
+#different mesh
+```
+
+
+Plot predictive mode, and 95% credible intervals
+Plot mean random effect and sd random efect, just like dolphin article.
+
+I also need to do the field, random mean and random sd
+do it in a for loop (maybe dont include the local.plot.field)
+then the correlation plots for points
+##until here
+
+
+
+## same as Dugong example Rmd
+## Barrier Model
+
+```{r, echo=FALSE}
+# check if the mesh and barriers are the the same
+ggplot() +
+  inlabru::gg(mesh.dng) +
+#  coord_sf(crs = crs_km) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5) +
+  xlim(c(-920, -907)) +
+  ylim(c(2877,2885))
+
+
+b1.area <- terra::rast(raster_b1)
+# b1.area on the Discussion at the end of this Rmd
+plot(b1.area, 
+     ylim = c(25.34, 25.41),
+     xlim = c(36.95, 37.1)); points(Data_ISD$long, Data_ISD$lat, col="red")
+
+# Draw barrier 2 to choose the points
+poly.water <- spdf.water 
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh.dng, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+# Plots for the mesh
+poly.water_sf <- st_as_sf(poly.water)
+poly.bars_sf <- st_as_sf(poly.bars)
+poly.bar1_sf <- st_as_sf(poly.bar1)
+poly.bar2_sf <- st_as_sf(poly.bar2)
+
+st_crs(poly.water_sf) <- crs_km
+st_crs(poly.bars_sf) <- crs_km
+st_crs(poly.bar1_sf) <- crs_km
+st_crs(poly.bar2_sf) <- crs_km
+
+# the mesh, same as gg_mesh
+gg_mesh + 
+  geom_sf(data = poly.water_sf,
+          col='red', alpha=0.5) 
+# covering barrier 1, islands and open deep sea
+gg_mesh + 
+  geom_sf(data = poly.bar1_sf,
+          col='red', alpha=0.5) 
+# covering barrier 2, water < -20 (and > -500)
+gg_mesh + 
+  geom_sf(data = poly.bar2_sf,
+          col='red', alpha=0.5) 
+# covering barrier 1 and barrier 2
+gg_mesh + 
+  geom_sf(data = poly.bars_sf,
+          col='red', alpha=0.5) 
+
+
+# covering barrier 1, islands and open deep sea
+gg_mesh.nob1 <- 
+  gg_mesh + 
+  geom_sf(data = poly.bar1_sf, fill = "white")
+
+# covering barrier 1 + partially covering bar 2
+gg_mesh.bars <-
+  gg_mesh.nob1 +
+  geom_sf(data = poly.bar2_sf,
+          col='deeppink3', fill = "pink", alpha=0.2)
+
+gg_mesh.bars +
+  xlim(c(-920, -907)) +
+  ylim(c(2877,2885))
+
+gg_mesh.bars +
+  xlim(c(-950, -900)) +
+  ylim(c(2870,2890))
+
+location <- matrix(c(c(-935), 
+                     c(2876)), ncol = 2)
+location.sp <- SpatialPoints(location, proj4string = crs_km)
+
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(location.sp), col = "red") +
+  xlim(c(-950, -900)) +
+  ylim(c(2870,2890))
+```
+
+```{r, echo=FALSE}
+points_nb <- rbind(coord.df_up, coord.df_low)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+st_crs(sf_points_nb) <- crs_km
+
+return.list.bar <- return.list
+coord.df_up.bar <- coord.df_up
+coord.df_low.bar <- coord.df_low
+
+gg_mesh.bars +
+#  geom_sf(data = st_as_sf(location.sp), col = "red") +
+#  geom_sf(data =sf_points_nb, col='deeppink3',size=1.7,alpha=0.5) +
+  xlim(c(-950, -900)) +
+  ylim(c(2860,2920))
+
+gg_mesh.bars +
+#  geom_sf(data = st_as_sf(location.sp), col = "red") +
+#  geom_sf(data =sf_points_nb, col='deeppink3',size=1.7,alpha=0.5) +
+  xlim(c(-950, -900)) +
+  ylim(c(2860,2920))
+
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(location.sp), col = "red") +
+  geom_sf(data =sf_points_nb,
+          col='deeppink3',size=1.7,alpha=0.5) +
+  xlim(c(-940, -930)) +
+  ylim(c(2872,2878))
+
+loc.corr <- matrix(c(-919, 2880,
+                     -909, 2875,
+                     -911, 2880,
+                     -914.0942, 2882.206,
+                     
+                     -923.0821, 2888.942,
+                     -924, 2892,
+                     -922.7535, 2896.290,
+                     
+                     -930.4101, 2900.680,
+                     -935.7784, 2899.498,
+                     -932.2049, 2900.386), ncol = 2, byrow = TRUE)
+
+colnames(loc.corr) <- c("x", "y")
+loc.corr  <- as.matrix(loc.corr)
+poly_loc.corr <- Polygon(loc.corr)
+
+sp_loc.corr  <- SpatialPoints(poly_loc.corr@coords)
+sf_loc.corr  <- st_as_sf(sp_loc.corr)
+st_crs(sf_loc.corr) <- crs_km
+
+sf_group1 <- st_as_sf(SpatialPoints(Polygon(loc.corr[1:4,])@coords))
+st_crs(sf_group1) <- crs_km
+
+sf_group2 <- st_as_sf(SpatialPoints(Polygon(loc.corr[5:7,])@coords))
+st_crs(sf_group2) <- crs_km
+
+sf_group3 <- st_as_sf(SpatialPoints(Polygon(loc.corr[8:10,])@coords))
+st_crs(sf_group3) <- crs_km
+
+gg_mesh.bars +
+#  geom_sf(data = st_as_sf(location.sp), col = "red") +
+#  geom_sf(data =sf_loc.corr, col='deeppink3',size=1.7) +
+  geom_sf(data =sf_group1, col='red3',size=1.7) +
+  geom_sf(data =sf_group2, col='green3',size=1.7) +
+  geom_sf(data =sf_group3, col='blue3',size=1.7) +
+  xlim(c(-950, -900)) +
+  ylim(c(2860,2920))
+```
+
+## I'm working with results[[19]]
+
+```{r}
+id.node.dng <- list()
+id.node.dng[[19]] <- id.node.tbm(mesh.dng, location = loc.corr, npoint = nrow(loc.corr))
+
+df_group1_ <- matrix(c(id.node.dng[[19]]$id.coord[[1]][1], id.node.dng[[19]]$id.coord[[1]][2]), 
+           ncol = 2)
+for (g in 2:4) {
+  df_group1_ <- rbind(df_group1_,
+                     matrix(c(id.node.dng[[19]]$id.coord[[g]][1], id.node.dng[[19]]$id.coord[[g]][2]), 
+                            ncol = 2))
+}
+df_group1 <- st_as_sf(SpatialPoints(df_group1_))
+st_crs(df_group1) <- crs_km
+
+### group2
+df_group2_ <- matrix(c(id.node.dng[[19]]$id.coord[[5]][1], id.node.dng[[19]]$id.coord[[5]][2]), 
+           ncol = 2)
+for (g in 6:7) {
+  df_group2_ <- rbind(df_group2_,
+                     matrix(c(id.node.dng[[19]]$id.coord[[g]][1], id.node.dng[[19]]$id.coord[[g]][2]), 
+                            ncol = 2))
+}
+df_group2 <- st_as_sf(SpatialPoints(df_group2_))
+st_crs(df_group2) <- crs_km
+###group 3
+df_group3_ <- matrix(c(id.node.dng[[19]]$id.coord[[8]][1], id.node.dng[[19]]$id.coord[[8]][2]), 
+           ncol = 2)
+for (g in 9:10) {
+  df_group3_ <- rbind(df_group3_,
+                     matrix(c(id.node.dng[[19]]$id.coord[[g]][1], id.node.dng[[19]]$id.coord[[g]][2]), 
+                            ncol = 2))
+}
+df_group3 <- st_as_sf(SpatialPoints(df_group3_))
+st_crs(df_group3) <- crs_km
+
+#png("plots/mesh.points.png")
+gg_mesh.bars +
+  geom_sf(data =sf_group1, col='red3',size=1.7) +
+  geom_sf(data = df_group1, col = "black", shape = 4) +
+  geom_sf(data =sf_group2, col='green3',size=1.7) +
+  geom_sf(data = df_group2, col = "black", shape = 4) +
+  geom_sf(data =sf_group3, col='blue3',size=1.7) +
+  geom_sf(data = df_group3, col = "black", shape = 4) +
+  xlim(c(-950, -900)) +
+  ylim(c(2860,2920))
+dev.off()
+
+#png("plots/mesh.dng50.png")
+gg_mesh
+dev.off()
+
+#png("plots/mesh.dng50zoom1.png")
+gg_mesh.bars +
+  xlim(c(-990, -890)) +
+  ylim(c(2840,2990))
+dev.off()
+
+#png("plots/mesh.dng50zoom2.png")
+gg_mesh.bars +
+  xlim(c(-950, -900)) +
+  ylim(c(2860,2920))
+dev.off()
+
+#png("plots/mesh.dng50zoom3.png")
+gg_mesh.bars +
+  xlim(c(-945, -905)) +
+  ylim(c(2875,2910))
+dev.off()
+
+#png("plots/mesh.dng50zoom4.png")
+gg_mesh.bars +
+  xlim(c(-940, -910)) +
+  ylim(c(2880,2905))
+dev.off()
+```
+
+```{r}
+# function for all points
+id.node.tbm <- function(mesh, 
+                        location, 
+                        npoint){ #npoint=nrow(location)
+  A.tmp <- list()
+  id.node <- list()
+  id.coord <- list()
+  for (n in 1:npoint) {
+    
+    A.tmp[[n]] <- inla.spde.make.A(mesh=mesh,
+                      loc = matrix(c(location[n,1],location[n,2]), nrow=1, ncol=2))
+
+    id.node[[n]] = which.max(A.tmp[[n]][1, ])
+    id.coord[[n]] <- c(mesh$loc[id.node[[n]], 1], mesh$loc[id.node[[n]], 2])
+  }
+  return.list <- list(id.node = id.node, id.coord = id.coord)
+  return(return.list)
+}
+```
+
+```{r}
+local.plot.field = function(field, mesh, xlim, ylim, ...){
+  # Error when using the wrong mesh
+  stopifnot(length(field) == mesh$n)
+  
+  # Choose plotting region to be the same as the study area polygon
+  if (missing(xlim)) xlim = poly.water@bbox[1, ] 
+  if (missing(ylim)) ylim = poly.water@bbox[2, ]
+  
+  # Project the mesh onto a 300x300 grid
+  proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(300, 300))
+  
+  # Do the projection 
+  field.proj = inla.mesh.project(proj, field)
+  
+  # Plot it
+  image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
+             xlim = xlim, ylim = ylim, ...)  
+}
+```
+
+```{r}
+corr.covfx <- function(range.fraction = range.fraction,
+                       id.node = id.node,
+                       prior.range = prior.range) {
+  
+  barrier.model <- inla.barrier.pcmatern.plus(
+    mesh = mesh,
+    fem = fem,
+    barrier.triangles = barrier.triangles,
+    prior.range = prior.range,
+    prior.sigma = prior.sigma,
+    range.fraction = range.fraction)
+  
+  Q <- inla.rgeneric.q(
+    barrier.model, 
+    "Q",
+    theta = c(log(prior.sigma[1]), 
+              log(prior.range[1])))
+
+  sd <- sqrt(diag(inla.qinv(Q)))
+  Inode <- rep(0, dim(Q)[1])
+  Inode[id.node] <- 1
+
+  covar.column <- solve(Q, Inode)
+  corr = drop(matrix(covar.column))/(sd*sd[id.node])
+  cov = drop(matrix(covar.column))
+
+  return.list <- list(corr = corr, cov = cov)
+  return(return.list)
+}
+```
+
+
+```{r}
+prior.range <- matrix(c(21,.5, 21,0.9, 41,0.9, 3,.5, 6,.5), ncol = 2, byrow = TRUE)
+prior.sigma <- c(1, 0.1)
+
+mesh <- mesh.dng
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+proj = inla.mesh.projector(mesh.dng, xlim = xlim, 
+                             ylim = ylim, dims=c(300, 300))
+
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+#Now I need to use all the range fractions and all the points/nodes
+corr.dng <- list()
+corr.dng[[19]] <- list()
+
+# all the points with the same range fraction x[1,]
+for (i in 1:nrow(x)) {
+  corr.dng[[19]][[i]] <- list()
+  for (j in 1:nrow(loc.corr)) { #group1
+    corr.dng_ <- 
+      corr.covfx(range.fraction = x[i,], 
+           id.node = id.node.dng[[19]]$id.node[[j]],
+           prior.range = prior.range[1,])
+    corr.dng[[19]][[i]][[j]] <- corr.dng_$corr
+}
+}
+
+#save(corr.dng, file = "corr.dng.points.RData")
+
+xlim = poly.water@bbox[1, ]
+ylim = poly.water@bbox[2, ]
+zlim = c(0.2,1)
+
+
+#nrow(x) range fraction = 8
+#nrow(loc.point) number of points = 10
+
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+point <- seq(1,10,1)
+
+for (j in 1:nrow(loc.corr)) {
+  fp <- file.path("plots/points_dng", paste0("point", point[j]))
+  dir.create(fp, recursive = TRUE)
+  path = fp
+  
+  for (i in 1:nrow(x)){
+    fpp <- file.path(paste0(path, "/", "fr", x[i,2], ".png"))
+    #png(fpp)
+    local.plot.field(field = corr.dng[[19]][[i]][[j]], 
+                 mesh = mesh.dng,
+                 asp = 1,
+                 zlim = c(0.2,1),
+                 xlim = c(-960, -900),
+                 ylim = c(2855, 2915), axes =F) 
+    points(id.node.dng[[19]]$id.coord[[j]][1], id.node.dng[[19]]$id.coord[[j]][2], pch = 20)
+    plot(poly.bar1, add = TRUE, col = alpha("snow3", 0.5))
+    plot(poly.bar2, add = TRUE, col = alpha("pink", 0.5))
+    plot(poly.water.book2, add = T, col = "white", lty = 0)
+
+    dev.off()
+
+}
+}
+
+for (j in 1:nrow(loc.corr)) {
+  fp <- file.path("plots/points_dng", paste0("point", point[j]))
+  path = fp
+  
+  for (i in 1:nrow(x)){
+    fpp <- file.path(paste0(path, "/", "fr", 0, ".png"))
+    #png(fpp)
+
+   local.plot.field(field = corr.dng[[19]][[1]][[j]], 
+                 mesh = mesh.dng,
+                 asp = 1,
+                 zlim = c(0.2,1),
+                 xlim = c(-960, -900),
+                 ylim = c(2855, 2915), axes =F) 
+    points(id.node.dng[[19]]$id.coord[[j]][1], id.node.dng[[19]]$id.coord[[j]][2], pch = 20)
+    plot(poly.bar1, add = TRUE, col = alpha("snow3", 0.5))
+    plot(poly.bar2, add = TRUE, col = alpha("pink", 0.5))
+    plot(poly.water.book2, add = T, col = "white", lty = 0)
+    dev.off()
+  }}
+```
+
+
+```{r}
+pl.sel2 <- SpatialPolygons(list(Polygons(list(Polygon(
+  cbind(c(-920, -900, -900, -920, -920), 
+        c(2840, 2840, 2950, 2950, 2840)),
+  FALSE)), '0')), proj4string = crs_km)
+plot(pl.sel2)
+
+poly.water.book2 <- gDifference(pl.sel2, sp4perimeter)
+
+plot(pl.sel2, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+
+plot(pl.sel2, col = alpha("skyblue", 0.5), asp = 1)
+plot(sp4perimeter, add = TRUE, col = alpha(gray(0.9), 0.5))
+plot(poly.water.book2, col = alpha("skyblue", 0.5))
+```
+
+
+for (i in 1:nrow(x)) {
+  corr.dng[[19]][[i]] <- list()
+  for (j in 1:nrow(loc.corr)) { #group1
+    corr.dng_ <- 
+      corr.covfx(range.fraction = x[i,], 
+           id.node = id.node.dng[[19]]$id.node[[j]],
+           prior.range = prior.range[1,])
+    corr.dng[[19]][[i]][[j]] <- corr.dng_$corr
+
+
+
+local.plot.field(field = corr.dng[[19]][[1]][[1]], 
+                 mesh = mesh.dng,
+                 asp = 1,
+                 zlim = c(0.2,1),
+                 xlim = c(-960, -900),
+                 ylim = c(2855, 2915), axes =F) 
+points(-919.197, 2879.886, pch = 20)
+plot(poly.bar1, add = TRUE, col = alpha("snow3", 0.5))
+plot(poly.bar2, add = TRUE, col = alpha("pink", 0.5))
+
+
+
+
+```{r, echo=FALSE}
+# plot normal area with dugong obs
+st_transform(st_as_sf(spdf.water), crs = crs_longlat)
+#xmin: 36.33313 ymin: 25.04603 xmax: 37.25152 ymax: 26.23307
+normal.area <- terra::rast(raster_no.b2)
+plot(normal.area, 
+     ylim = c(25.04603, 26.23307),
+     xlim = c(36.33313, 37.25152)); points(all_dugong$long, all_dugong$lat, col="red")
+plot(normal.area); points(Data_ISD$long, Data_ISD$lat, col="red")
+#all_dugong includes some data from surveys. 
+
+plot(normal.area, 
+     ylim = c(25.3, 25.5),
+     xlim = c(36.9, 37.2)); points(Data_ISD$long, Data_ISD$lat, col="red")
+
+plot(normal.area, 
+     ylim = c(25.4, 25.35),
+     xlim = c(37, 37.1)); points(Data_ISD$long, Data_ISD$lat, col="red")
+
+# plot barrier 1 (r_b=0.01), i.e. islands and deep open water
+b1.area <- terra::rast(raster_b1)
+plot(b1.area, 
+     ylim = c(25.04603, 26.23307),
+     xlim = c(36.33313, 37.25152)); points(Data_ISD$long, Data_ISD$lat, col="red")
+
+
+# plot barrier 2, islands, deep open water, water below -20 m
+b2.area <- terra::rast(raster_b2)
+plot(b2.area, 
+     ylim = c(25.04603, 26.23307),
+     xlim = c(36.33313, 37.25152)); points(Data_ISD$long, Data_ISD$lat, col="red")
+
+#1 point 
+plot(b2.area, 
+     ylim = c(26, 26.2),
+     xlim = c(36.5, 36.7)); points(all_dugong$long, all_dugong$lat, col="red")
+#2, 3 
+plot(b2.area, 
+     ylim = c(25.82, 25.86),
+     xlim = c(36.55, 36.65)); points(all_dugong$long, all_dugong$lat, col="red")
+     
+#4 - 10
+plot(b2.area, 
+     ylim = c(25.57, 25.72),
+     xlim = c(36.75, 36.98)); points(all_dugong$long, all_dugong$lat, col="red")
+
+#11 - 16     
+plot(b2.area, 
+     ylim = c(25.4, 25.55),
+     xlim = c(36.5, 36.98)); points(all_dugong$long, all_dugong$lat, col="red")
+     
+#17 - 27
+plot(b2.area, 
+     ylim = c(25.34, 25.41),
+     xlim = c(36.95, 37.1)); points(all_dugong$long, all_dugong$lat, col="red")
+```
+
+```{r, echo=FALSE}
+# WHAT HAPPENS WHEN I USE -10 m
+# raster w/o islands (b1) and b2 
+# 90% between -10 and 0 depth, https://www.nature.com/articles/s41598-021-04412-3
+# ratio = 0.1/0.9 ~ 0.11
+
+# opposite
+raster_b2.2 <- raster_no.islands
+raster_b2.2[raster_b2.2 >= -10] <- NA
+# plot
+plot(raster_b2); plot(raster_b2.2)
+
+b2.2.area <- terra::rast(raster_b2.2)
+plot(b2.2.area, 
+     ylim = c(25.04603, 26.23307),
+     xlim = c(36.33313, 37.25152)); points(all_dugong$long, all_dugong$lat, col="red")
+
+#1 point 
+plot(b2.2.area, 
+     ylim = c(26, 26.2),
+     xlim = c(36.5, 36.7)); points(all_dugong$long, all_dugong$lat, col="red")
+#2, 3 
+plot(b2.2.area, 
+     ylim = c(25.82, 25.86),
+     xlim = c(36.55, 36.65)); points(all_dugong$long, all_dugong$lat, col="red")
+     
+#4 - 10
+plot(b2.2.area, 
+     ylim = c(25.57, 25.72),
+     xlim = c(36.75, 36.98)); points(all_dugong$long, all_dugong$lat, col="red")
+
+#11 - 16     
+plot(b2.2.area, 
+     ylim = c(25.4, 25.55),
+     xlim = c(36.5, 36.98)); points(all_dugong$long, all_dugong$lat, col="red")
+     
+#17 - 27
+plot(b2.2.area, 
+     ylim = c(25.34, 25.41),
+     xlim = c(36.95, 37.1)); points(all_dugong$long, all_dugong$lat, col="red")
+```
+
+### sp and sf mesh
+
+Doing the mesh with `sp4msh` **is not the same** as `sf4msh`
+To check, run:
+gg_mesh.nob1 <- 
+  gg_mesh_ + 
+  geom_sf(data = poly.bar1_sf, fill = "white")
+
+covering barrier 1 + partially covering bar 2
+gg_mesh.bars <-
+  gg_mesh.nob1 +
+  geom_sf(data = poly.bar2_sf,
+          col='deeppink3', fill = "pink", alpha=0.2)
+
+gg_mesh.bars +
+  xlim(c(-920, -907)) +
+  ylim(c(2877,2885))
+
+gg_mesh.bars +
+  xlim(c(-950, -900)) +
+  ylim(c(2870,2890))
+
+```{r, echo=FALSE}
+sf4msh <- st_as_sf(sp4msh)
+mesh.dng_sf <- inla.mesh.2d(boundary = sf4msh,
+                            max.edge = c(1,5)*max.edge.length,
+                            cutoff = 0.05,
+                            offset = c(max.edge.length, bound.outer))
+mesh.dng_sf$crs <- crs_km
+
+gg_mesh_ <- ggplot() +
+  inlabru::gg(mesh.dng_sf, crs = crs_km) +
+  coord_sf(crs = crs_km) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5)
+```
+
+### Choosing pair of points
+
+We have defined transparency as the ratio between correlation for the same two points, that way we avoid any distance correction. Transparency could eventually be extended to ratio between different pairs, however I don't see the need if examples are based on knowing the correlation when there's no barrier, not knowing the correlation in the normal area when there are barriers around. This (for now wrong) example is shown below.
+
+#### Choosing the wrong points
+
+```{r, echo=FALSE}
+## normal area pair of points
+location <- matrix(c(c(-935, -918), 
+                     c(2876, 2882)), ncol = 2)
+location.sp <- SpatialPoints(location, proj4string = crs_km)
+
+y.up <- location[2,2]
+y.low <- location[2,1]
+
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > (y.up + max.edge.length/2))[1]]]
+id.node <- id.nodeA[which(A.y.vector > (y.up + max.edge.length/2))[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.up <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+## lower point
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,(y.up - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,(y.up - max.edge.length)), nrow=1, ncol=2))
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < (y.up - max.edge.length/2))[1]]]
+id.node <- id.nodeA[which(A.y.vector < (y.up - max.edge.length/2))[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+return.list.low <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+return.list <- list(point.up = return.list.up, point.low = return.list.low)
+
+coord.df_up <- return.list$point.up$id.coord
+coord.df_low <- return.list$point.low$id.coord
+
+points_nb <- rbind(coord.df_up, coord.df_low)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+st_crs(sf_points_nb) <- crs_km
+
+return.list.norm <- return.list
+coord.df_up.norm <- coord.df_up
+coord.df_low.norm <- coord.df_low
+
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(location.sp), col = "red") +
+  geom_sf(data =sf_points_nb,
+          col='deeppink3',size=1.7,alpha=0.5) +
+  xlim(c(-925, -910)) +
+  ylim(c(2880,2885))
+```
+
+
+
+
+
+
+```{r, echo=FALSE}
+
+```
+
+
+```{r, echo=FALSE}
+#### `c(0.7, 0.4)` aimed ratio  
+x <- c(0.1618411, 0.1028846)
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[1],x[2]))
+
+formula.bm <- y ~ 0 + b0 + f(i, model = barrier.model)
+
+## [[1]] set 1: prior.range = c(1, 0.5); prior.sigma = c(1, 0.1)
+## [[1]][[2]] set 1, aim c(0.7, 0.4)
+
+res.pp.bm[[1]][[2]] <- inla(formula.bm,
+                 data = inla.stack.data(stk.pp),
+                 control.predictor = list(A = inla.stack.A(stk.pp)),
+                 family = 'poisson', 
+                 E = inla.stack.data(stk.pp)$e, 
+                 control.inla = list(int.strategy = "eb"))
+
+
+#### `c(0.5, 0.5)` aimed ratio  
+x <- c(0.1466231, 0.1107695)
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[1],x[2]))
+
+formula.bm <- y ~ 0 + b0 + f(i, model = barrier.model)
+
+## [[1]] set 1: prior.range = c(1, 0.5); prior.sigma = c(1, 0.1)
+## [[1]][[3]] set 1, aim c(0.5, 0.5)
+
+res.pp.bm[[1]][[3]] <- inla(formula.bm,
+                 data = inla.stack.data(stk.pp),
+                 control.predictor = list(A = inla.stack.A(stk.pp)),
+                 family = 'poisson', 
+                 E = inla.stack.data(stk.pp)$e, 
+                 control.inla = list(int.strategy = "eb"))
+```
+
+
+
+
+
+```{r, echo=FALSE}
+
+```
+
+I dont know if I need it
+```{r, echo=FALSE}
+poly.water <- spdf.water 
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh.dng, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+#PLOT
+poly.water_sf <- st_as_sf(poly.water)
+coast_bbox <- st_bbox(poly.water_sf) %>% st_as_sfc()
+
+poly.bars_sf <- st_as_sf(poly.bars)
+
+poly.bar1_sf <- st_as_sf(poly.bar1)
+poly.bar2_sf <- st_as_sf(poly.bar2)
+
+
+
+sf4msh <- st_as_sf(sp4msh)
+mesh.dng_sf <- inla.mesh.2d(boundary = sf4msh,
+                            max.edge = c(1,5)*max.edge.length,
+                            cutoff = 0.05,
+                            offset = c(max.edge.length, bound.outer))
+mesh.dng_sf$crs <- crs_km
+
+ggplot() +
+  inlabru::gg(mesh.dng_sf, crs = crs_km) +
+  coord_sf(crs = crs_km) +
+  geom_sf(data=st_as_sf(cords_Dng.sp),
+          col='purple',size=1.7,alpha=0.5)
+
+```
+
+
+
+
+
+
+```{r, echo=FALSE}
+
+```
+
+
+```{r 2, eval=FALSE, echo=FALSE}
+plot1 <- leaflet() %>% 
+  setView(lng = median(Data_ISD$long), lat = median(Data_ISD$lat), zoom = 8) %>%
+  addProviderTiles(providers$OpenStreetMap, group = "Open Street Map") %>% 
+  # Add additional basemap layers
+  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI World Imagery") %>% 
+  addProviderTiles(providers$Esri.OceanBasemap, group = "ESRI Ocean Basemap") %>% 
+  # Add a User-Interface (UI) control to switch layers
+  addLayersControl(
+    baseGroups = c("Open Street Map","ESRI World Imagery","ESRI Ocean Basemap"),
+    options = layersControlOptions(collapsed = FALSE)) 
+
+frameWidget(plot1, width = "100%", height = "500")
+```
+
+```{r 3}
+plot_dng1 <- leaflet() %>% 
+  setView(lng = mean(Data_ISD$long), lat = mean(Data_ISD$lat), zoom = 8) %>%
+  addProviderTiles(providers$OpenStreetMap, group = "Open Street Map") %>% 
+  # Add additional basemap layers
+  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI World Imagery") %>% 
+  addProviderTiles(providers$Esri.OceanBasemap, group = "ESRI Ocean Basemap") %>% 
+  # Add a User-Interface (UI) control to switch layers
+  addLayersControl(
+    baseGroups = c("Open Street Map","ESRI World Imagery","ESRI Ocean Basemap"),
+    options = layersControlOptions(collapsed = FALSE)) %>%
+  addMarkers(lng = Data_ISD$long, lat = Data_ISD$lat, group = "Dugong",
+             icon = 
+               list(iconUrl = dng_icon,
+                    iconSize = c(20,20)))
+
+frameWidget(plot_dng1, width = "100%", height = "500")
+```
+
+
+
+
+Functions
+These are different than the ones in functions.rmd so update and change for local.plot.field_ when I finish so there's no 2 fx with the same name
+
+```{r, echo=FALSE}
+# from: https://haakonbakkagit.github.io/btopic103.html
+local.plot.field = function(field, xlim, ylim, mesh, pal = plasma(17), ...){
+  if (missing(xlim)) xlim = c(2, 8) 
+  if (missing(ylim)) ylim = xlim
+  proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(300, 300))
+  # - Can project from the mesh onto a 300x300 grid 
+  #   for plots
+  field.proj = inla.mesh.project(proj, field)
+  # - Do the projection
+  # pal <- wes_palette("Zissou1", type = "continuous")
+  image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
+             xlim = xlim, ylim = ylim, col = pal, ...)  
+  # - Use image.plot to get nice colors and legend
+}
+# print(mesh$n)
+```
+
+
+```{r, echo=FALSE}
+# pp has if(missing(xlim))...
+local.plot.fieldpp = function(field, mesh, poly.water, xlim, ylim, zlim=c(0.1, 1), dims=c(300, 300),...){ #, pal = rainbow(17)
+ # poly.water = km_sp4msh, it has to be the SpatialPolygon object used in inla.mesh.2d
+ # Error when using the wrong mesh
+ stopifnot(length(field) == mesh$n)
+    
+ # Choose plotting region to be the same as the study area polygon
+ if (missing(xlim)) xlim = poly.water@bbox[1, ] 
+ if (missing(ylim)) ylim = poly.water@bbox[2, ]
+    
+ # Project the mesh onto a 300x300 grid   
+ proj = inla.mesh.projector(mesh, xlim = xlim,                              
+                            ylim = ylim, dims=c(300, 300)) 
+ # Do the projection 
+ field.proj = inla.mesh.project(proj, field)
+       
+ # Plot it
+ image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
+               xlim = xlim, ylim = ylim, zlim = zlim, ...)  #, col = pal
+  }
+```
+
+```{r, echo=FALSE}
+#Plot barrier model
+local.find.correlation = function(Q, location, mesh) {
+  ## Vector of standard deviations
+  sd = sqrt(diag(inla.qinv(Q)))
+  
+  ## Create a fake A matrix, to extract the closest mesh node index
+  A.tmp = inla.spde.make.A(mesh=mesh, 
+                           loc = matrix(c(location[1],location[2]),1,2))
+  
+  ## Index of the closest node
+  id.node = which.max(A.tmp[1, ])
+  
+  
+  print(paste('The location used was c(', 
+              round(mesh$loc[id.node, 1], 4), ', ', 
+              round(mesh$loc[id.node, 2], 4), ')' ))
+  
+  ## Solve a matrix system to find the column of the covariance matrix
+  Inode = rep(0, dim(Q)[1]) 
+  Inode[id.node] = 1
+  covar.column = solve(Q, Inode)
+  # compute correaltions
+  corr = drop(matrix(covar.column)) / (sd*sd[id.node])
+  return(corr)
+}
+```
+
+```{r}
+xx <- matrix(c(1,1, 0.01,0.01, 0.2,0.2, 0.3,0.3, 0.5,0.5, 0.7,0.7, 0.8,0.8), ncol = 2, byrow = TRUE)
+
+for (j in 20:(20+nrow(xx)-1)) {
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[(j-19),1],x[(j-19),2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+}
+
+
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range,
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(xx[1,1],xx[1,2]))
+  
+  model[[20]] <- tbm
+  formula[[20]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[20]] <- inla(formula[[20]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+ 
+
+
+```
+
+
+```{r}
+#whit w50 [[19]]
+j = 20
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(x[3,1],x[3,2]))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+```
+
+plots for fields same range for both barriers
+```{r}
+# w 50
+#j 20, range fraction 0.01,1
+j = 21
+x <- matrix(c(1,1, 0.01,0.01, 0.01,1, 0.01,0.2, 0.01,0.3, 0.01,0.5, 0.01,0.7, 0.01,0.8), ncol = 2, byrow = TRUE)
+
+  
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(0.2,0.2))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+  res.dng.pred[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+
+
+```
+
+```{r}
+# w 50
+#j 20, range fraction 0.01,1
+#j 21 range fraction 0.2,0.2
+j = 21
+
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(0.2,0.2))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+
+###
+j = 22
+
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(0.3,0.3))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+  
+###
+j = 23
+
+  tbm <- inla.barrier.pcmatern.plus(mesh =  mesh.dng, 
+                             fem = fem, 
+                             barrier.triangles = barrier.triangles, 
+                             prior.range = prior.range[1,],
+                             prior.sigma = prior.sigma,
+                             range.fraction = c(0.5,0.5))
+  
+  model[[j]] <- tbm
+  formula[[j]] <- y ~ 0 + b0 + f(i, model =  tbm)
+
+  res.dng[[j]] <- inla(formula[[j]],
+                 data = inla.stack.data(joint.stk),
+                 family = 'poisson', 
+                 control.predictor = list(A = inla.stack.A(joint.stk), link = 1), 
+                 E = inla.stack.data(joint.stk)$e, 
+                 inla.mode = "experimental")
+
+```
+
+
+```{r}
+local.plot.field.book(
+  res.dng[[20]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-975, -895),
+  ylim = c(2860, 2950), axes =F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+###
+
+local.plot.field.book(
+  res.dng[[21]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-975, -895),
+  ylim = c(2860, 2950), axes =F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[22]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-975, -895),
+  ylim = c(2860, 2950), axes =F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[23]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-975, -895),
+  ylim = c(2860, 2950), axes =F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+###
+###
+
+local.plot.field.book(
+  res.dng[[21]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-980, -900),
+  ylim = c(2870, 2920), axes = F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[22]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-980, -900),
+  ylim = c(2870, 2920), axes = F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[23]]$summary.random$i$mean,
+  asp = 1,
+  xlim = c(-980, -900),
+  ylim = c(2870, 2920), axes = F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+```
+
+```{r}
+local.plot.field.book(
+  res.dng[[23]]$summary.fitted.values[idx.pred, "mean"],
+  asp = 1,
+  xlim = c(-980, -900),
+  ylim = c(2870, 2920), axes = F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+#plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[21]]$summary.fitted.values[idx.pred, "mean"],
+  asp = 1,
+  xlim = c(-980, -900),
+  ylim = c(2870, 2920), axes = F)
+plot(poly.bar1, add = TRUE, col = "snow3", lty = 0)
+#plot(poly.bar2, add = TRUE, col = "pink", lty = 0) #alpha("pink", 0.8)
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+```
+
+
+```{r}
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "mean"],
+#  zlim = c(-30.22, 30),
+  main = "", asp = 1, col = book.color.c(100),
+  axes = FALSE)
+#16
+# Posterior mode
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "mode"],
+  main = "", asp = 1, col = book.color.c(100),
+  axes = FALSE)
+#17
+# Posterior sd
+local.plot.field.book(
+  res.dng.pred[[1]]$summary.fitted.values[idx.pred, "sd"],
+  asp = 1,
+  col = book.color.c2(100), axes = FALSE)
+```
+
+
+```{r}
+mesh <- mesh.dng
+poly.water <- spdf.water
+local.plot.field.book(
+  res.dng[[21]]$summary.random$i$mean)
+plot(poly.bar1, add = TRUE, col = alpha("snow3", 0.8))
+plot(poly.bar2, add = TRUE, col = alpha("pink", 0.8))
+plot(poly.water.book, add = T, col = "white", lty = 0)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+summary(res.dng[[19]]$summary.random$i$mean)
+mesh <- mesh.dng
+poly.water <- spdf.water
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean,  zlim = c(15, 25))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean, zlim = c(5, 25))
+plot(poly.bar1, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+#the zones that have very high value are the ones that are enclosed by barriers 
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean)
+
+exp(res.dng[[19]]$summary.hyperpar)
+
+local.plot.field.book(
+  res.dng[[19]]$summary.random$i$mean)
+plot(poly.bar1, add = TRUE, col = "skyblue")
+plot(poly.bar2, add = TRUE, col = "gray")
+plot(poly.water.book, add = TRUE, col = "skyblue") #col = alpha("skyblue", 0.5)
+points(xy[,1], xy[,2], pch = 20, col = "black")
+
+```
+
+
+
+
