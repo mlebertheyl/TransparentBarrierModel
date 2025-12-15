@@ -1,0 +1,2503 @@
+This was the first idea of transparency ratios
+
+Whether the point should be taken at the edge or the middle is I think up to interpretation. 
+I would think if one is thinking that the chance of crossing the barrier (because let's say the habitat conditions are worse there) is 20% I would choose a point at the edge because I'm wondering whether to "enter" the barrier area. 
+
+Now, thinking about it, if I take an area to be stationary or in this case locally stationary the correlation vs distance plot shouldn't have much variation, and I should see a somewhat "clean" line. This same plot should have high variation when measured at a point close to the edge. This is due to the fact that the correlation at x distance to the right (normal area) and to the left (barrier area) won't be the same even though the distance is the same, i.e. we have really low correlation and high correlation at the same measured distance.
+
+So now we can think of (correlation at) three points to compare: i) point at the middle of normal area; ii) point at the middle of barrier area; iii) point at the edge. 
+Note that I am not taking the correlation between a pair of points rather one point and the entire correlation vs distance distribution.
+
+As a first approach for this new idea, I will just play with the prior range, and leaving all the range fractions at 1. This is just to visualize this "clean" curves in their "cleanest" way. For this I only need one point since I am not using any barriers around.
+Next, I will play around changing the range fractions and locations of points. Mainly locations at the different sides of the edge.
+
+Do several trials of the previous ideas to show this works for more than one example by coincidence.
+
+(Expected) Results
++ this shouldn't depend on the geometry of the barrier because I am not measuring how much of this correlation is changing (kind of like the mass of the correlation that is shifting), rather only the fact that it is shifting. The fact that it is shifting indicates a barrier independant of the area of the barrier.
++ clean curves inside the locally stationary areas, noisy curves close to the edge.
++ noise at the edge will be proportional to the range fraction at correlation 0.2
++ If I want to increase the noise at a given distance then I might need to measure the correlation at that distance as if everything was normal area, do the corr ratio and fin an r thta will give that noise (at that distance).
++ When might this be helpful? When I want to increase the noise at a distance much closer than when correlation is 0.2. For example, if i have this 20% case, then I will want to increase the noise 80% at the distance from the edge I am choosing my measuring point.  
+The reason for this, is that if the chances are 20% of what they use to cross to certain area, then the "clean" curve should move 80%. Note that the curve consider all correlation around my desired point, hence the curve will contain the normal area correlation and the barrier area correlations, that's why I will get a super noisy curve.
+
+
+More on the latter,
+Following this noisy curve idea, why would I want this to happen before 0.2 correlation?
+i.e. why would I want to the noise before 0.2 corr.
+
+Let's say the correlation is 0.2 at a distance $d_1 = 15m$. When I add noise by changing the range I will get correlation values of 0.2 at 5m too (look at the following example plots) but is this what I want?
+
+Not really, I don't want the correlation to drop if I'm 15m away from the barrier, I want the correlation to drop at the edge. On other words I don't want to see a correlation decay before it hits the barrier.
+I still have to find what kind of ratio will give me this result but this is the main idea. Maybe the ratio is still the same at corr 0.8, and it is not only true at 0.2. The latter is more or less obvious from the plots.
+
+Maybe it is worth thinking what happens from the edge out instead of from the normal area to the barrier. It's worth mentioning that multiplying the range in the normal area instead of doing a fraction on the barrier area worked well on the proposal. This would mean thinking of the barrier as a reference area and then the normal area as a "better" area with higher range.
+
+It's also worth noting that points close to the barrier will have less interference from other barriers with different ranges. Barriers with the same range won't interfere since the noise produced will be the same. Still the curve considering the correlation as if there were no barrier $b_2$ is inherently considering some of the noise of the permanent barrier $b_1$
+
+
+The next is organized as follows: 
+`range.fraction = c(fraction normal area, range.fraction b1, range.fraction b1)*prior.range[1]`
+The fraction for the normal area is 1, here we will modify it just to prove our point.
+
+i) `range.fraction = c(1, 1, 1)` for all barriers so there are no barriers in practice and the range is equal to the prior range everywhere.
+ii) `range.fraction = c(0.3, 0.3, 0.3)` for all normal and barrier area, so in practice there will be no barriers just a normal area 0.3 of the prior range from i).
+iii) `range.fraction = c(1, 1, 0.3)` the barrier 2 scenario -with $r_{b_1} = 1$, so basically no barrier 1.- This plot should be a combination of plots i) and ii).
+iv) `range.fraction = c(1, 0.01, 0.3)` the actual barrier scenario with both fractions for $b_1$ and $b_2$.
+v) `range.fraction = c(1, 0.01, 1)` the barrier scenario just accounting for barrier 1, just to check how it affects the noise of the normal area.
+
+After the plots:
+Maybe it's worth exploring the distribution of the maximum and the minimum correlation vs the distance
+
+
+```{r}
+#choose a ref point
+gg_mesh.bars +
+  xlim(c(-950, -900)) +
+  ylim(c(2870,2890))
+
+gg_mesh.bars +
+  xlim(c(-925, -915)) +
+  ylim(c(2874,2878))
+
+location <- matrix(c(c(-918), 
+                     c(2877)), ncol = 2)
+location.sp <- SpatialPoints(location, proj4string = crs_km)
+
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(location.sp), col = "red") +
+  xlim(c(-925, -915)) +
+  ylim(c(2874,2878))
+
+mesh <- mesh.dng
+## barrier area pair of points
+y.up <- location[1,2]
+y.low <- location[1,1]
+A.tmp <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(y.low,y.up), nrow=1, ncol=2))
+
+id.node = which.max(A.tmp[1, ])
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(SpatialPoints(
+    matrix(c(c(-917.986), c(2876.862)), ncol = 2), proj4string = crs_km)), col = "red") +
+  xlim(c(-925, -915)) +
+  ylim(c(2874,2878))
+```
+
+```{r}
+# dims can be change for different resolution
+local.plot.field = function(field, mesh, xlim, ylim, ...){
+  # Error when using the wrong mesh
+  stopifnot(length(field) == mesh$n)
+  
+  # Choose plotting region to be the same as the study area polygon
+  if (missing(xlim)) xlim = poly.water@bbox[1, ] 
+  if (missing(ylim)) ylim = poly.water@bbox[2, ]
+  
+  # Project the mesh onto a 300x300 grid
+  proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(300, 300))
+  
+  # Do the projection 
+  field.proj = inla.mesh.project(proj, field)
+  
+  # Plot it
+  image.plot(list(x = proj$x, y=proj$y, z = field.proj), 
+             xlim = xlim, ylim = ylim, ...)  
+}
+```
+
+```{r}
+prior.range = c(21.0,  0.5)
+prior.sigma = c(3.00, 0.01)
+
+corr.covfx <- function(range.fraction = range.fraction,
+                       id.node = id.node,
+                       prior.range = prior.range) {
+  
+  barrier.model <- inla.barrier.pcmatern.plus(
+    mesh = mesh,
+    fem = fem,
+    barrier.triangles = barrier.triangles,
+    prior.range = prior.range,
+    prior.sigma = prior.sigma,
+    range.fraction = range.fraction)
+  
+  Q <- inla.rgeneric.q(
+    barrier.model, 
+    "Q",
+    theta = c(log(prior.sigma[1]), 
+              log(prior.range[1])))
+
+  sd <- sqrt(diag(inla.qinv(Q)))
+  Inode <- rep(0, dim(Q)[1])
+  Inode[id.node] <- 1
+
+  covar.column <- solve(Q, Inode)
+  corr = drop(matrix(covar.column))/(sd*sd[id.node])
+  cov = drop(matrix(covar.column))
+
+  return.list <- list(corr = corr, cov = cov)
+  return(return.list)
+}
+
+df4plot <- function(field, 
+                    dims = 300,
+                    id.coord = id.coord) {
+  
+  proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(dims, dims))
+  
+  # Do the projection 
+  field.proj = inla.mesh.project(proj, field)
+  
+  hilo <- list()
+  for(i in 1:dims) {
+    hilo[[i]] <- field.proj[,i]
+  }
+  
+  hilo <- unlist(hilo)
+
+  df <- cbind(proj$lattice$loc,
+    sqrt((proj$lattice$loc[,1] - id.coord[[1]])^2 + (proj$lattice$loc[,2] - id.coord[[2]])^2),
+    hilo)
+
+  colnames(df) <- c("x", "y", "dist", "field")
+  df <- as.data.frame(df)
+  return(df)
+}
+
+corr.plots <- function(field, df,
+                       xlim, ylim, zlim,
+                       points = NULL,
+                       filter = 0.2,
+                       show.plot.field = TRUE,
+                       plot.order = 1){
+  
+  if(show.plot.field == TRUE) {
+    local.plot.field(field, mesh, 
+                     xlim = xlim, 
+                     ylim = ylim,
+                     zlim = zlim)
+    points(points)
+  }
+  
+  df <- df %>% dplyr::filter(field > filter)
+  
+  if(plot.order == 1){
+  gg <- ggplot(data = df, aes(x = field, y = dist)) +
+    geom_line()
+  }
+  
+  if(plot.order == 2){ 
+  gg <- ggplot(data = df, aes(x = dist, y = field)) +
+    geom_line()
+  }
+  
+  return.list <- list(df = summary(df), gg = gg)
+  return(return.list)
+}
+```
+
+```{r}
+range.fraction <- c(1, 1)
+i <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i$corr
+i.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+xlim = (c(-950, -900))
+ylim = (c(2870,2890))
+zlim = c(0.1,1)
+#zlim = c(0.1, 1)
+#xlim = poly.water@bbox[1, ] 
+#ylim = poly.water@bbox[2, ]
+
+i.plots <- corr.plots(field, df = i.df,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = i.df, xlim, ylim, zlim, filter = -1)
+i.plots
+```
+
+
+```{r}
+prior.range <- c(21.0*0.3,  0.5)
+range.fraction <- c(1, 1)
+ii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii$corr
+ii.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ii.plots <- corr.plots(field, df = ii.df,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = ii.df, xlim, ylim, zlim, filter = -1)
+ii.plots
+```
+
+
+```{r}
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.3)
+iii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii$corr
+iii.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+iii.plots <- corr.plots(field, df = iii.df,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = iii.df, xlim, ylim, zlim, filter = -1)
+iii.plots
+```
+
+```{r}
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.3)
+iv <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv$corr
+iv.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+iv.plots <- corr.plots(field, df = iv.df,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = iv.df, xlim, ylim, zlim, filter = -1)
+iv.plots
+```
+
+```{r}
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v$corr
+v.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+v.plots <- corr.plots(field, df = v.df,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = v.df, xlim, ylim, zlim, filter = -1)
+v.plots
+```
+
+# Results
+
+When comparing the summary tables of all the cases  without filtering the correlation we see the summary of the distance is the same with all the range fraction variations, meaning it's not only being affected by 0.3, but 0.1 is affecting the same way as 0.3.
+
+I also notice that 0.01 affects the field variation at low correlation but starts disappearing after ~0.5. It makes sense since that barrier is not close to the reference point so it will only affect distant (low correlated) points. This proves that we need to work with high corr part of the field if there are barriers with different ranges around so that the noise we see is actually from the barrier we want and not other neighbors. This also means we need points at the edge of the barrier i am trying to find the range for.
+
+Now, to get this kind of range of noise i am talking about I need (when I have the mix of range) not to only look at the max but now at the max and minimum distance for a give correlation, e.g. the maximum distance I will get a correlation of let's say 0.6, and the minimum distance I will get a correlation fo 0.6. It like looking at a range (in the difference on the y axis sense not in the range parameter sense).
+At least when filtering corr > 0.2 for  the i) and ii) case the 0.3 proportion from one case to another holds for the max, 3rd q, mean, median, and so on... so I would guess making the cut at 0.6 instead of 0.2 will still be valid but I have to check.
+
+Before making the cuts, I need to compare this maximum and minimum I mentioned before.
+
+Once I have the range (on the y axis not the hyperparameter) get the ratio and then do the optimization that gives me the range for that ratio, moving along side the barrier shouldn't change this ratio if I choose points close enough to the barrier.
+
+From the plots on the supplementary section I can see that obviously I will have little obs at 15m distance because I am lowering the range.
+I can get the ratio from the range on the y axis considering a distance ratio or a correlation ratio, it's just like imagining a ratio on whatever I put on the y-axis.
+
+Steps to get the ratios (whichever I choose) -let's work with example iv) first-.
+  + redo the plots just to take a closer look at the options (supplementary section)
+  + correlation values are not duplicated, but the differences are at e^-5
+  + after looking at the plots (at the end, supplementary section) I think I can make decent correlation categories by = 0.0001
+  
+```{r}
+corr.cat <- seq(0, 1, by = 0.01) #corr category 
+df.corr.cat <- list() #each category will be a df in a list
+for (i in 1:(length(corr.cat)-1)) {
+  df.corr.cat[[i]] <- iv.df %>% dplyr::filter(field >= corr.cat[i] & field < corr.cat[i+1])
+}
+#str(df.corr.cat)
+
+df.clist <- list()
+for (i in 1:(length(corr.cat)-1)) { #length(df.corr.cat)
+  max <- rep(max(df.corr.cat[[i]]$dist), dim(df.corr.cat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.corr.cat[[i]]$dist), dim(df.corr.cat[[i]])[1])
+  cat <- rep(corr.cat[i+1], dim(df.corr.cat[[i]])[1])
+  df.clist[[i]] <- cbind(df.corr.cat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.c <- df.clist[[1]]
+for (i in 2:(length(corr.cat)-1)) {
+  df.c <- rbind(df.c, df.clist[[i]])
+}
+
+ggplot(data = df.c, aes(x = field, y = dist)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+```
+
+```{r}
+df.c2 <- df.c %>% 
+  dplyr::mutate(dist.max.3 = max*0.3,
+                dist.range = (max - min),
+                dist.range.3 = (max - min)*0.3,
+                minmax = min/max)
+df.c2 <- df.c2 %>% dplyr::mutate(per = dist.range/max)
+
+ggplot(data = df.c2, aes(x = field, y = dist)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_point(aes(x = cat, y = dist.max.3), colour = "green2") +
+    geom_point(aes(x = cat, y = dist.range), colour = "cyan1") +
+    #geom_point(aes(x = cat, y = dist.range.3), colour = "yellow1") +
+    #geom_point(aes(x = cat, y = minmax), colour = "yellow1") +
+    geom_point(aes(x = cat, y = per), colour = "yellow1") +
+    geom_line(data = v.df, aes(x = field, y = dist),
+              alpha = 0.1, colour = "lightblue") 
+    
+summary(df.c2)
+```
+
+Now v is the reference case, i.e. the results as if there was no barrier.
+
+```{r}
+corr.cat <- seq(0, 1, by = 0.01) #corr category 
+df.corr.cat <- list() #each category will be a df in a list
+for (i in 1:(length(corr.cat)-1)) {
+  df.corr.cat[[i]] <- v.df %>% dplyr::filter(field >= corr.cat[i] & field < corr.cat[i+1])
+}
+#str(df.corr.cat)
+
+df.clist <- list()
+for (i in 1:(length(corr.cat)-1)) { #length(df.corr.cat)
+  max <- rep(max(df.corr.cat[[i]]$dist), dim(df.corr.cat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.corr.cat[[i]]$dist), dim(df.corr.cat[[i]])[1])
+  cat <- rep(corr.cat[i+1], dim(df.corr.cat[[i]])[1])
+  df.clist[[i]] <- cbind(df.corr.cat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.c.v <- df.clist[[1]]
+for (i in 2:(length(corr.cat)-1)) {
+  df.c.v <- rbind(df.c.v, df.clist[[i]])
+}
+
+ggplot(data = df.c.v, aes(x = field, y = dist)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+```
+```{r}
+df.cv2 <- df.c.v %>% 
+  dplyr::mutate(dist.max.3 = max*0.3,
+                dist.range = (max - min),
+                dist.range.3 = (max - min)*0.3,
+                minmax = min/max)
+df.cv2 <- df.cv2 %>% dplyr::mutate(per = dist.range/max)
+
+df.c2.75 <- df.c2 %>% dplyr::filter(field >= 0.75)
+df.cv2.75 <- df.cv2 %>% dplyr::filter(field >= 0.75)
+
+ggplot(data = df.c2.75, aes(x = field, y = dist)) +
+    geom_line(linewidth = 0.5, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_point(aes(x = cat, y = dist.max.3), colour = "green2") +
+    geom_point(aes(x = cat, y = dist.range), colour = "cyan1") +
+    #geom_point(aes(x = cat, y = dist.range.3), colour = "yellow1") +
+    #geom_point(aes(x = cat, y = minmax), colour = "yellow1") +
+    geom_point(aes(x = cat, y = per), colour = "yellow1") +
+    geom_line(data = df.cv2.75, aes(x = field, y = dist),
+              alpha = 0.8, colour = "lightblue") +
+
+    geom_point(data = df.cv2.75, aes(x = cat, y = max), colour = "red1", shape = 8) +
+    geom_point(data = df.cv2.75, aes(x = cat, y = min), colour = "orange1", shape = 8) +
+    geom_point(data = df.cv2.75, aes(x = cat, y = dist.max.3), colour = "green2", shape = 8) +
+    geom_point(data = df.cv2.75, aes(x = cat, y = dist.range), colour = "cyan1", shape = 8) +
+    geom_point(data = df.cv2.75, aes(x = cat, y = per), colour = "yellow1", shape = 8) 
+
+
+
+```
+Range on y axis of the barrier over the reference is kinda stable ish, this could be my ratio 
+
+```{r}
+summary(df.c2.75)
+summary(df.cv2.75)
+
+data.frame(dist.range.v = unique(df.cv2.75$dist.range),
+           dist.range.iv = unique(df.c2.75$dist.range), 
+           
+           iv.div.v = (unique(df.cv2.75$dist.range)/(unique(df.c2.75$dist.range))),
+           dist.min.v = unique(df.cv2.75$min),
+           dist.min.iv = unique(df.c2.75$min),
+           dist.max.v = unique(df.cv2.75$max),
+           dist.max.iv = unique(df.c2.75$max))
+
+df.iv.div.v <- data.frame(y = (unique(df.cv2.75$dist.range)/(unique(df.c2.75$dist.range))),
+                          x = unique(df.c2.75$cat))
+
+
+ggplot(data = df.c2.75, aes(x = field, y = dist)) +
+    geom_line(aes(x = cat, y = max), colour = "red1") +
+    geom_line(aes(x = cat, y = min), colour = "orange1") +
+    geom_line(aes(x = cat, y = dist.range), colour = "cyan1") +
+    geom_line(data = df.cv2.75, aes(x = cat, y = max), colour = "red1", shape = 8) +
+    geom_line(data = df.cv2.75, aes(x = cat, y = min), colour = "orange1", shape = 8) +
+    geom_line(data = df.cv2.75, aes(x = cat, y = dist.range), colour = "cyan1", shape = 8) +
+    geom_line(data = df.iv.div.v, aes(x = x, y = y), colour = "yellow1", shape = 8) 
+
+```
+
+```{r}
+data.frame(dist.range.v = unique(df.cv2.75$dist.range),
+           dist.range.iv = unique(df.c2.75$dist.range), 
+           
+           v.div.iv = (unique(df.cv2.75$dist.range)/(unique(df.c2.75$dist.range))),
+           dist.min.v = unique(df.cv2.75$min),
+           dist.min.iv = unique(df.c2.75$min),
+           dist.max.v = unique(df.cv2.75$max),
+           dist.max.iv = unique(df.c2.75$max))
+
+data.frame(dist.min.v = unique(df.cv2.75$min),
+           dist.min.iv = unique(df.c2.75$min), 
+           
+           v.div.iv = (unique(df.cv2.75$min)/(unique(df.c2.75$min))),
+           iv.div.v = (unique(df.c2.75$min)/(unique(df.cv2.75$min))))
+```
+
+All the same but field in the y axis by distance on the x axis
+
+```{r}
+corr.plots(field, df = i.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = ii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iv.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = v.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+```
+
+```{r}
+iv.dfilter.1 <- iv.df %>% dplyr::filter(field > 0.1)
+df <- iv.dfilter.1
+f <- floor(min(df$dist))
+c <- ceiling(max(df$dist))
+dist.cat <- seq(f, c, by = 0.1)
+
+df.dcat <- list() #each distance category (dcat) will be a df in a list
+for (i in 1:(length(dist.cat)-1)) {
+  df.dcat[[i]] <- df %>% dplyr::filter(dist >= dist.cat[i] & dist < dist.cat[i+1])
+}
+
+df.dlist <- list()
+for (i in 1:(length(dist.cat)-1)) { #length(dist.dcat)
+  max <- rep(max(df.dcat[[i]]$field), dim(df.dcat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.dcat[[i]]$field), dim(df.dcat[[i]])[1])
+  cat <- rep(dist.cat[i+1], dim(df.dcat[[i]])[1])
+  df.dlist[[i]] <- cbind(df.dcat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.d <- df.dlist[[1]]
+for (i in 2:(length(dist.cat)-1)) {
+  df.d <- rbind(df.d, df.dlist[[i]])
+}
+
+ggplot(data = df.d, aes(x = dist, y = field)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+```
+
+```{r}
+df.d2 <- df.d %>% 
+  dplyr::mutate(field.range = (max - min),
+                field.mean =(max+min)/2,
+                minmax = min/max)
+df.d2 <- df.d2 %>% dplyr::mutate(a = minmax*field.mean,
+                                 b = minmax*field.range)
+
+v.dfilter.1 <- v.df %>% dplyr::filter(field > 0.1)
+ggplot(data = df.d2, aes(x = dist, y = field)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    #geom_point(aes(x = cat, y = field.range), colour = "green1") +
+    geom_point(aes(x = cat, y = field.mean), colour = "cyan1") +
+    geom_point(aes(x = cat, y = minmax), colour = "yellow1") +
+    #geom_point(aes(x = cat, y = b), colour = "pink1") +
+    geom_line(data = v.dfilter.1, aes(x = dist, y = field),
+              alpha = 0.2, colour = "lightblue") 
+
+summary(df.d2)
+```
+
+
+```{r}
+v.dfilter.1 <- v.df %>% dplyr::filter(field > 0.1)
+df <- v.dfilter.1
+f <- floor(min(df$dist))
+c <- ceiling(max(df$dist))
+dist.cat <- seq(f, c, by = 0.1)
+
+df.dcat <- list() #each distance category (dcat) will be a df in a list
+for (i in 1:(length(dist.cat)-1)) {
+  df.dcat[[i]] <- df %>% dplyr::filter(dist >= dist.cat[i] & dist < dist.cat[i+1])
+}
+
+df.dlist <- list()
+for (i in 1:(length(dist.cat)-1)) { #length(dist.dcat)
+  max <- rep(max(df.dcat[[i]]$field), dim(df.dcat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.dcat[[i]]$field), dim(df.dcat[[i]])[1])
+  cat <- rep(dist.cat[i+1], dim(df.dcat[[i]])[1])
+  df.dlist[[i]] <- cbind(df.dcat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.d.v <- df.dlist[[1]]
+for (i in 2:(length(dist.cat)-1)) {
+  df.d.v <- rbind(df.d.v, df.dlist[[i]])
+}
+
+ggplot(data = df.d.v, aes(x = dist, y = field)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+
+``` 
+
+```{r}
+df.dv2 <- df.d.v %>% 
+  dplyr::mutate(field.range = (max - min),
+                field.mean =(max+min)/2,
+                minmax = min/max)
+df.dv2 <- df.dv2 %>% dplyr::mutate(a = minmax*field.mean,
+                                 b = minmax*field.range)
+
+ggplot(data = df.d2, aes(x = dist, y = field)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_line(data = df.dv2, aes(x = dist, y = field),
+            alpha = 0.8, colour = "lightblue") 
+
+df.d2.5 <- df.d2 %>% dplyr::filter(dist <= 5)
+df.dv2.5 <- df.dv2 %>% dplyr::filter(dist <= 5)
+
+ggplot(data = df.d2.5, aes(x = dist, y = field)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_point(aes(x = cat, y = field.range), colour = "cyan1") +
+    geom_point(aes(x = cat, y = minmax), colour = "green1") +
+
+    geom_point(data = df.dv2.5, aes(x = cat, y = max), colour = "red1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = min), colour = "orange1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = field.range), colour = "cyan1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = minmax), colour = "green2", shape = 8)
+
+
+
+```
+
+```{r}
+df.d.ratios <- data.frame(cat = unique(df.dv2.5$cat),
+  field.range.v = unique(df.dv2.5$field.range),
+  field.range.iv = unique(df.d2.5$field.range), 
+  range.ratio.inv = (unique(df.dv2.5$field.range)/(unique(df.d2.5$field.range))),
+  range.ratio = (unique(df.d2.5$field.range)/unique(df.dv2.5$cat)),
+  field.min.v = unique(df.dv2.5$min),
+  field.min.iv = unique(df.d2.5$min), 
+  min.ratio.inv = (unique(df.dv2.5$min)/(unique(df.d2.5$min))),
+  min.ratio  = (unique(df.d2.5$min)/(unique(df.dv2.5$min))),
+  field.max.v = unique(df.dv2.5$max),
+  field.max.iv = unique(df.d2.5$max),
+  minmax.v = unique(df.dv2.5$minmax),
+  minmax.iv = unique(df.d2.5$minmax), 
+  minmax.ratio = unique(df.d2.5$minmax)/unique(df.dv2.5$minmax))
+
+df.d.ratios %>% 
+```
+```{r}
+# after all the data frames and possible ratios this could be the best:
+df.ratio <- 
+  data.frame(corr.cat = unique(df.cv2.75$cat),
+             dist.range.ratio.v.iv = 
+               (unique(df.cv2.75$dist.range)/(unique(df.c2.75$dist.range))),
+             corr.by.ratio = 
+               (unique(df.cv2.75$dist.range)/unique(df.c2.75$dist.range))*unique(df.cv2.75$cat),
+             sum.v = (unique(df.cv2.75$min) + unique(df.cv2.75$max)),
+             sum.iv = (unique(df.c2.75$min) + unique(df.c2.75$max)),
+             iv.div.v = (unique(df.c2.75$min) + unique(df.c2.75$max))/(unique(df.cv2.75$min) + unique(df.cv2.75$max)))
+
+df.ratio %>% dplyr::mutate(ratio2 = dist.range.ratio.v.iv/iv.div.v)
+
+df.ratio %>% dplyr::mutate(fisher = 0.5*log((1+corr.cat)/(1-corr.cat))) %>% 
+  dplyr::mutate(ratio2 = dist.range.ratio.v.iv*fisher) 
+
+df.ratio2 <- df.ratio %>% dplyr::mutate(fisher = 0.5*log((1+corr.cat)/(1-corr.cat))) %>% 
+  dplyr::mutate(ratio2 = dist.range.ratio.v.iv*fisher,
+                ratio3 = dist.range.ratio.v.iv/fisher,
+                ratio1 = dist.range.ratio.v.iv/iv.div.v) %>% 
+  dplyr::filter(corr.cat != 1)
+
+
+ggplot(data = df.ratio2, aes(x = field, y = dist)) +
+    geom_line(aes(x = corr.cat, y = dist.range.ratio.v.iv), colour = "red1") +
+    geom_line(aes(x = corr.cat, y = corr.by.ratio), colour = "orange1") +
+    geom_line(aes(x = corr.cat, y = ratio1), colour = "cyan1") +
+    geom_line(aes(x = corr.cat, y = fisher), colour = "yellow1") +
+    geom_line(aes(x = corr.cat, y = ratio2), colour = "green1") +
+    geom_line(aes(x = corr.cat, y = ratio3), colour = "pink1")
+
+summary(df.ratio2)
+```
+
+What I kinda want to say is:
+1. the expert says there's 30% chance of the Dugong being in deep sea $b_2$.
+2. i will change the correlation structure of one point (close to the edge between the normal area and $b_2$) with respect to all of the other points by modifying the range fraction inside $b_2$
+
+3. i will compare somehow what happens when there's no barrier vs what happens when there is a barrier
+3.1. I start by getting the correlation with respect to that point when there's no barrier, and project it onto the map getting a squared matrix with dim = zlim.
+3.2. Get the correlation with $b_2$, and project it onto the map getting a squared matrix with dim = zlim.
+
+4. Now, I want to get a measure of the difference between the case with only normal area and the case where there's a barrier.
+5. One way of putting a number on the dissimilarity between 2 matrices is $s = 1- \frac{||A-B||_F}{||A||_F + ||B||_F}$
+
+6. Since I want the chance inside to be 30% I could say that the dissimilarity should be close to 70%, and $\frac{||A-B||_F}{||A||_F + ||B||_F}$ should be close to 0.3
+
+7. transparency could be $\frac{||A-B||_F}{||A||_F + ||B||_F} = 1-c$ with $c$ the variation I want (70%)
+
+Does it work in other cases? nope
+
+I need to take max and min correlation (or max and min distance), the entire matrix will of course not work because it depends on the area of the barrier
+Keep in mind I want to "extend" what happens at the edge of the barrier to the entire barrier, meaning the knowledge I have is about the edge
+
+```{r}
+range.fraction <- c(0.01, 0.3)
+iv <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+range.fraction <- c(0.01, 1)
+v <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+A <- inla.mesh.project(proj, v$corr)
+A[is.na(A)] <- 0
+A[which(A < 0.8)] <- 0
+Af <- norm(A, "F")
+
+B <- inla.mesh.project(proj, iv$corr)
+B[is.na(B)] <- 0
+B[which(B < 0.8)] <- 0
+Bf <- norm(B, "F")
+
+A_B <- A-B
+A_Bf <- norm(A_B, "F")
+1-(A_Bf/(Af+Bf)) #0.665688
+(A_Bf/(Af+Bf)) #0.334312
+
+```
+```{r}
+range.fraction <- c(0.01, 0.5)
+iv_ <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+range.fraction <- c(0.01, 1)
+v_ <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+A <- inla.mesh.project(proj, v_$corr)
+A[is.na(A)] <- 0
+A[which(A < 0.9)] <- 0
+Af <- norm(A, "F")
+
+B <- inla.mesh.project(proj, iv_$corr)
+B[is.na(B)] <- 0
+B[which(B < 0.9)] <- 0
+Bf <- norm(B, "F")
+
+A_B <- A-B
+A_Bf <- norm(A_B, "F")
+1-(A_Bf/(Af+Bf)) #0.6855269
+(A_Bf/(Af+Bf)) #0.3144731
+```
+
+
+```{r}
+s <- 0.9+0.8+0.5+0.2 
+0.9*100/2.4
+```
+```{r}
+corr.plots(field, df = i.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = ii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iv.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = v.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+
+i.df <- i.df %>% mutate(ln.field = log(field))
+ii.df <- ii.df %>% mutate(ln.field = log(field))
+i.df <- i.df %>% mutate(ln.field = ln(field))
+
+ggplot(data = i.df, aes(x = dist, y = field)) +
+  geom_line(data = iii.df, aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df, aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df, aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df, aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+
+
+
+```
+```{r}
+prior.sigma = c(3.00, 0.01)
+xlim = (c(-950, -900))
+ylim = (c(2870,2890))
+zlim = c(0.1,1)
+##i
+i <- list()
+i.df <- list()
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[1]]$corr
+i.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+ii <- list()
+ii.df <- list()
+prior.range <- c(21.0*0.3,  0.5)
+range.fraction <- c(1, 1)
+ii[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[1]]$corr
+ii.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+iii <- list()
+iii.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.3)
+iii[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[1]]$corr
+iii.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+iv <- list()
+iv.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.3)
+iv[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[1]]$corr
+iv.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+v <- list()
+v.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[1]]$corr
+v.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[1]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[1]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[1]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[1]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[1]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[2]]$corr
+i.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.5,  0.5)
+range.fraction <- c(1, 1)
+ii[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[2]]$corr
+ii.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.5)
+iii[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[2]]$corr
+iii.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.5)
+iv[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[2]]$corr
+iv.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[2]]$corr
+v.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[2]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[2]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[2]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[2]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[2]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[3]]$corr
+i.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.8,  0.5)
+range.fraction <- c(1, 1)
+ii[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[3]]$corr
+ii.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.8)
+iii[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[3]]$corr
+iii.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.8)
+iv[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[3]]$corr
+iv.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[3]]$corr
+v.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[3]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[3]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[3]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[3]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[3]], aes(x = dist, y = field)) +
+  ylim(c(0.7,1)) + xlim(c(0,4))
+
+```
+
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[4]]$corr
+i.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.2,  0.5)
+range.fraction <- c(1, 1)
+ii[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[4]]$corr
+ii.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.2)
+iii[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[4]]$corr
+iii.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.2)
+iv[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[4]]$corr
+iv.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[4]]$corr
+v.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[4]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[4]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[4]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[4]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[4]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+
+```
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[5]]$corr
+i.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.1,  0.5)
+range.fraction <- c(1, 1)
+ii[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[5]]$corr
+ii.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.1)
+iii[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[5]]$corr
+iii.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.1)
+iv[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[5]]$corr
+iv.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[5]]$corr
+v.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[5]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[5]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[5]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[5]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[5]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+
+
+
+```{r}
+ii.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+i.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+iv.df08 <- iv.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+max(iv.df08[,3])
+min(iv.df08[,3])
+
+n <- list()
+b <- list()
+ratio <- list()
+
+b[[4]] <- ii.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[4]] <- i.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[4]] <- b[[4]][,4]/n[[4]][,4]
+
+iv.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+i.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+
+b[[1]] <- ii.df[[1]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[1]] <- i.df[[1]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[1]] <- b[[1]][,4]/n[[1]][,4]
+
+b[[2]] <- ii.df[[2]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[2]] <- i.df[[2]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[2]] <- b[[2]][,4]/n[[2]][,4]
+
+b[[3]] <- ii.df[[3]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[3]] <- i.df[[3]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[3]] <- b[[3]][,4]/n[[3]][,4]
+
+b[[5]] <- ii.df[[5]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[5]] <- i.df[[5]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[5]] <- b[[5]][,4]/n[[5]][,4]
+
+####
+
+st <- 1-ratio[[5]]
+norm.ratio <- list()
+for (i in 1:4) {
+  norm.ratio[[i]] <- (ratio[[i]]-st)/st
+}
+```
+
+```{r}
+b[[4]] <- ii.df[[4]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[4]] <- i.df[[4]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[4]] <- b[[4]][,4]/n[[4]][,4]
+
+b[[1]] <- ii.df[[1]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[1]] <- i.df[[1]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[1]] <- b[[1]][,4]/n[[1]][,4]
+
+b[[2]] <- ii.df[[2]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[2]] <- i.df[[2]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[2]] <- b[[2]][,4]/n[[2]][,4]
+
+b[[3]] <- ii.df[[3]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[3]] <- i.df[[3]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[3]] <- b[[3]][,4]/n[[3]][,4]
+
+ratio
+```
+
+This is the idea that I think I will actually choose
+
+Meeting Elias Dec 11
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = c(1, 2, 3)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.3, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+for(i in 1:3){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:3, lty = 1)
+
+```
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = c(1, 2, 3, 10)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.1, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+for(i in 1:4){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:4, lty = 1)
+```
+
+```{r}
+fratio = function(p, r0 = 1, h = r0 * 0.3) {
+  r1.e = log(p)/(r0 - h)
+  r0.W = optimize(function(r) {
+    c.r = inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  return(c(r0.W$minimum, E=r1.e))
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+
+```{r}
+fratio = function(p, r0 = 5, h = r0 * 0.1) {
+  r.W = optimize(function(r) {
+    c.r = inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  fract = r.W$minimum/r0
+  attr(fract, "ranges") = c("normal" = r0, "barrier"=r.W$minimum)
+  return(fract)
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+#### corr draft
+
+```{r}
+iv.dfilter.1 <- iv.df %>% dplyr::filter(field > 0.1) %>% 
+  dplyr::mutate(fisher = 0.5*log((1+field)/(1-field)))
+df <- iv.dfilter.1
+f <- floor(min(df$dist))
+c <- ceiling(max(df$dist))
+dist.cat <- seq(f, c, by = 0.1)
+
+df.dcat <- list() #each distance category (dcat) will be a df in a list
+for (i in 1:(length(dist.cat)-1)) {
+  df.dcat[[i]] <- df %>% dplyr::filter(dist >= dist.cat[i] & dist < dist.cat[i+1])
+}
+
+df.dlist <- list()
+for (i in 1:(length(dist.cat)-1)) { #length(dist.dcat)
+  max <- rep(max(df.dcat[[i]]$fisher), dim(df.dcat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.dcat[[i]]$fisher), dim(df.dcat[[i]])[1])
+  cat <- rep(dist.cat[i+1], dim(df.dcat[[i]])[1])
+  df.dlist[[i]] <- cbind(df.dcat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.d <- df.dlist[[1]]
+for (i in 2:(length(dist.cat)-1)) {
+  df.d <- rbind(df.d, df.dlist[[i]])
+}
+
+ggplot(data = df.d, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+```
+
+```{r}
+df.d2 <- df.d %>% 
+  dplyr::mutate(fisher.range = (max - min),
+                fisher.mean =(max+min)/2,
+                minmax = min/max)
+df.d2 <- df.d2 %>% dplyr::mutate(a = minmax*fisher.mean,
+                                 b = minmax*fisher.range)
+
+
+ggplot(data = df.d2, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_point(aes(x = cat, y = fisher.range), colour = "green1") +
+    geom_point(aes(x = cat, y = fisher.mean), colour = "cyan1") 
+    #geom_point(aes(x = cat, y = minmax), colour = "yellow1") +
+    #geom_point(aes(x = cat, y = b), colour = "pink1") 
+
+
+summary(df.d2)
+```
+iv.dfilter.1 <- iv.df %>% dplyr::filter(field > 0.1) %>% 
+  dplyr::mutate(fisher = 0.5*log((1+field)/(1-field)))
+df <- iv.dfilter.1
+f <- floor(min(df$dist))
+c <- ceiling(max(df$dist))
+dist.cat <- seq(f, c, by = 0.1)
+
+```{r}
+v.dfilter.1 <- v.df %>% dplyr::filter(field > 0.1) %>% 
+  dplyr::mutate(fisher = 0.5*log((1+field)/(1-field)))
+df <- v.dfilter.1
+f <- floor(min(df$dist))
+c <- ceiling(max(df$dist))
+dist.cat <- seq(f, c, by = 0.1)
+
+df.dcat <- list() #each distance category (dcat) will be a df in a list
+for (i in 1:(length(dist.cat)-1)) {
+  df.dcat[[i]] <- df %>% dplyr::filter(dist >= dist.cat[i] & dist < dist.cat[i+1])
+}
+
+df.dlist <- list()
+for (i in 1:(length(dist.cat)-1)) { #length(dist.dcat)
+  max <- rep(max(df.dcat[[i]]$fisher), dim(df.dcat[[i]])[1]) #ccat from corr.cat
+  min <- rep(min(df.dcat[[i]]$fisher), dim(df.dcat[[i]])[1])
+  cat <- rep(dist.cat[i+1], dim(df.dcat[[i]])[1])
+  df.dlist[[i]] <- cbind(df.dcat[[i]], max, min, cat)
+}
+
+# I need to bind the lists so it's one data frame for ggplot
+df.d.v <- df.dlist[[1]]
+for (i in 2:(length(dist.cat)-1)) {
+  df.d.v <- rbind(df.d.v, df.dlist[[i]])
+}
+
+ggplot(data = df.d.v, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1")
+``` 
+
+```{r}
+df.dv2 <- df.d.v %>% 
+  dplyr::mutate(fisher.range = (max - min),
+                fisher.mean =(max+min)/2,
+                minmax = min/max)
+df.dv2 <- df.dv2 %>% dplyr::mutate(a = minmax*fisher.mean,
+                                 b = minmax*fisher.range)
+
+ggplot(data = df.d2, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_line(data = df.dv2, aes(x = dist, y = fisher),
+              colour = "lightblue") 
+
+
+ggplot(data = df.d2, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+  geom_line(data = df.dv2, aes(x = dist, y = fisher),
+              colour = "lightblue") +
+    geom_line(aes(x = cat, y = fisher.range), colour = "cyan1") +
+    geom_line(aes(x = cat, y = fisher.mean), colour = "green1") +
+    geom_line(data = df.dv2, aes(x = cat, y = fisher.range), colour = "cyan1", shape = 8) +
+    geom_line(data = df.dv2, aes(x = cat, y = fisher.mean), colour = "green2", shape = 8)
+```
+
+
+```{r}
+df.d2.5 <- df.d2 %>% dplyr::filter(dist <= 10)
+df.dv2.5 <- df.dv2 %>% dplyr::filter(dist <= 10)
+
+ggplot(data = df.d2.5, aes(x = dist, y = fisher)) +
+    geom_line(linewidth = 0.1, alpha = 0.5) +
+    geom_point(aes(x = cat, y = max), colour = "red1") +
+    geom_point(aes(x = cat, y = min), colour = "orange1") +
+    geom_point(aes(x = cat, y = fisher.range), colour = "cyan1") +
+    geom_point(aes(x = cat, y = minmax), colour = "green1") +
+
+    geom_point(data = df.dv2.5, aes(x = cat, y = max), colour = "red1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = min), colour = "orange1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = fisher.range), colour = "cyan1", shape = 8) +
+    geom_point(data = df.dv2.5, aes(x = cat, y = minmax), colour = "green2", shape = 8)
+
+
+
+```
+
+```{r}
+df.d.ratios_ <- data.frame(cat = unique(df.dv2.5$cat),
+  fisher.range.v = unique(df.dv2.5$fisher.range),
+  fisher.range.iv = unique(df.d2.5$fisher.range), 
+  range.ratio.inv = (unique(df.dv2.5$fisher.range)/(unique(df.d2.5$fisher.range))),
+  rangemax.iv = (unique(df.d2.5$fisher.range)/unique(df.d2.5$max)),
+  rangemax.v = (unique(df.dv2.5$fisher.range)/unique(df.dv2.5$max)),
+  fisher.min.v = unique(df.dv2.5$min),
+  fisher.min.iv = unique(df.d2.5$min), 
+  min.ratio.inv = (unique(df.dv2.5$min)/(unique(df.d2.5$min))),
+  min.ratio  = (unique(df.d2.5$min)/(unique(df.dv2.5$min))),
+  fisher.max.v = unique(df.dv2.5$max),
+  fisher.max.iv = unique(df.d2.5$max),
+  minmax.v = unique(df.dv2.5$minmax),
+  minmax.iv = unique(df.d2.5$minmax), 
+  minmax.ratio = unique(df.d2.5$minmax)/unique(df.dv2.5$minmax))
+
+df.d.ratios <- df.d.ratios_ %>% dplyr::mutate(rangemax.ratio = rangemax.iv/minmax.v)
+
+ggplot(data = df.d2.5, aes(x = dist, y = fisher)) +
+  geom_line(linewidth = 0.1, alpha = 0.5) +
+  geom_line(data = df.dv2.5, aes(x = dist, y = fisher),
+            alpha = 0.5,  colour = "lightblue") +
+
+  geom_line(aes(x = cat, y = max),
+            alpha = 0.8, colour = "red1") +
+  geom_line(aes(x = cat, y = min), 
+            alpha = 0.8, colour = "orange1") +
+  geom_line(data = df.dv2.5, aes(x = cat, y = max), 
+            alpha = 0.8, colour = "red1", linetype = 3) +
+  geom_line(data = df.dv2.5, aes(x = cat, y = min), 
+             alpha = 0.8,, colour = "orange1", linetype = 3) +
+  
+  geom_point(aes(x = cat, y = minmax),
+             colour = "cyan1") +
+  geom_point(data = df.dv2.5, aes(x = cat, y = minmax),
+             colour = "cyan3") +
+  geom_point(data = df.d.ratios, aes(x = cat, y = minmax.ratio),
+             colour = "cyan4") +
+  
+  geom_point(data = df.d.ratios, aes(x = cat, y = rangemax.iv),
+             colour = "green1") +
+  geom_point(data = df.d.ratios, aes(x = cat, y = rangemax.ratio),
+             colour = "green4") 
+
+#we want values of minmax.v close to 1
+
+ggplot(data = df.d2.5, aes(x = dist, y = fisher)) +
+  geom_line(linewidth = 0.1, alpha = 0.5) +
+  geom_line(data = df.dv2.5, aes(x = dist, y = fisher),
+            alpha = 0.5,  colour = "lightblue") +
+
+  geom_line(aes(x = cat, y = max),
+            alpha = 0.8, colour = "red1") +
+  geom_line(aes(x = cat, y = min), 
+            alpha = 0.8, colour = "orange1") +
+  geom_line(data = df.dv2.5, aes(x = cat, y = max), 
+            alpha = 0.8, colour = "red1", linetype = 3) +
+  geom_line(data = df.dv2.5, aes(x = cat, y = min), 
+             alpha = 0.8,, colour = "orange1", linetype = 3) +
+  
+  geom_point(aes(x = cat, y = minmax),
+             colour = "cyan1") +
+  geom_point(data = df.dv2.5, aes(x = cat, y = minmax),
+             colour = "cyan3") +
+  geom_point(data = df.d.ratios, aes(x = cat, y = minmax.ratio),
+             colour = "cyan4") +
+  
+  geom_point(data = df.d.ratios, aes(x = cat, y = rangemax.iv),
+             colour = "green1") +
+  geom_point(data = df.d.ratios, aes(x = cat, y = rangemax.ratio),
+             colour = "green4") +
+  xlim(c(0, 7.5)) +
+  ylim(c(0, 4))
+```
+
+```{r}
+#minmax control iii
+(16.63-5.6)/16.63
+#range max iii
+6/15.7
+#minmax iv
+(15.7-6)/15.7 #im clearly not getting a value close to 0.3 as I would without b1
+
+df.d.ratios
+```
+what I'm seeing is range.max.iv gets close to the reference value 0.66 when fisher min v is close to 1
+*the reference case is minmax, and range max for plot 3, when I only have barrier 2 with rb2 = 0.3, i.e. I don't have b1 affecting the results*
+
+I think (and I will check next)
+This makes sense because when fisher range min is close to one in v range on y for 5 should be close to 0.
+When fisher range min is close to 1 rangemax.iv should be close to rangemax ratio since minmax.v should be close to 1
+Check what happens with corr instead of ficher correction. meaning which value does the minimum correlation range for 5 gets close to.
+
+This doesn't actually happen so maybe fisher = 1 means nothing
+
+There's more explanations on my notebook too
+
+
+```{r}
+df.d.ratios %>% dplyr::mutate(corr = atanh(fisher.min.v)) 
+df.d.ratios %>% dplyr::mutate(corr = atanh(fisher.min.v))  %>% 
+  dplyr::filter(cat<4)
+```
+Do it with corr without the fisher transformation and then for the next case.
+
+I've done non of this for the distance on y and corr on x case.
+
+
+```{r}
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 1)
+i <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i$corr
+dims = 300
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                             ylim = ylim, dims=c(dims, dims))
+
+# Do the projection 
+field.proj = inla.mesh.project(proj, field)
+field.proj[is.na(field.proj)] <- 0
+
+norm(field.proj, "F") #40.84708
+
+i.plots <- corr.plots(field, df = i.df,
+                      xlim = (c(-950, -900)), 
+                      ylim = (c(2870,2890)), 
+                      zlim = c(0.1,1),
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = i.df, xlim, ylim, zlim, filter = -1)
+i.plots
+```
+```{r}
+range.fraction <- c(1, 0.3)
+iii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii$corr
+
+# Do the projection 
+field.proj = inla.mesh.project(proj, field)
+field.proj[is.na(field.proj)] <- 0
+
+norm(field.proj, "F") #30.29131
+```
+```{r}
+range.fraction <- c(0.01, 0.3)
+iv <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv$corr
+
+field.proj = inla.mesh.project(proj, field)
+field.proj[is.na(field.proj)] <- 0
+
+norm(field.proj, "F") #29.04901
+```
+```{r}
+range.fraction <- c(0.01, 1)
+v <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v$corr
+
+field.proj = inla.mesh.project(proj, field)
+field.proj[is.na(field.proj)] <- 0
+
+norm(field.proj, "F") #39.52249
+```
+```{r}
+A <- inla.mesh.project(proj, v$corr)
+A[is.na(A)] <- 0
+Af <- norm(A, "F")
+B <- inla.mesh.project(proj, iv$corr)
+B[is.na(B)] <- 0
+Bf <- norm(B, "F")
+A_B <- A-B
+A_Bf <- norm(A_B, "F")
+1-(A_Bf/(Af+Bf)) #0.6855269
+(A_Bf/(Af+Bf)) #0.3144731
+
+```
+What I kinda want to say is:
+1. the expert says there's 30% chance of the Dugong being in deep sea $b_2$.
+2. i will change the correlation structure of one point (close to the edge between the normal area and $b_2$) with respect to all of the other points by modifying the range fraction inside $b_2$
+
+3. i will compare somehow what happens when there's no barrier vs what happens when there is a barrier
+3.1. I start by getting the correlation with respect to that point when there's no barrier, and project it onto the map getting a squared matrix with dim = zlim.
+3.2. Get the correlation with $b_2$, and project it onto the map getting a squared matrix with dim = zlim.
+
+4. Now, I want to get a measure of the difference between the case with only normal area and the case where there's a barrier.
+5. One way of putting a number on the dissimilarity between 2 matrices is $s = 1- \frac{||A-B||_F}{||A||_F + ||B||_F}$
+
+6. Since I want the chance inside to be 30% I could say that the dissimilarity should be close to 70%, and $\frac{||A-B||_F}{||A||_F + ||B||_F}$ should be close to 0.3
+
+7. transparency could be $\frac{||A-B||_F}{||A||_F + ||B||_F} = 1-c$ with $c$ the variation I want (70%)
+
+Does it work in other cases? nope
+
+I need to take max and min correlation (or max and min distance), the entire matrix will of course not work because it depends on the area of the barrier
+Keep in mind I want to "extend" what happens at the edge of the barrier to the entire barrier, meaning the knowledge I have is about the edge
+
+```{r}
+range.fraction <- c(0.01, 0.3)
+iv <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+range.fraction <- c(0.01, 1)
+v <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+A <- inla.mesh.project(proj, v$corr)
+A[is.na(A)] <- 0
+A[which(A < 0.8)] <- 0
+Af <- norm(A, "F")
+
+B <- inla.mesh.project(proj, iv$corr)
+B[is.na(B)] <- 0
+B[which(B < 0.8)] <- 0
+Bf <- norm(B, "F")
+
+A_B <- A-B
+A_Bf <- norm(A_B, "F")
+1-(A_Bf/(Af+Bf)) #0.665688
+(A_Bf/(Af+Bf)) #0.334312
+
+```
+```{r}
+range.fraction <- c(0.01, 0.5)
+iv_ <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+range.fraction <- c(0.01, 1)
+v_ <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+
+A <- inla.mesh.project(proj, v_$corr)
+A[is.na(A)] <- 0
+A[which(A < 0.9)] <- 0
+Af <- norm(A, "F")
+
+B <- inla.mesh.project(proj, iv_$corr)
+B[is.na(B)] <- 0
+B[which(B < 0.9)] <- 0
+Bf <- norm(B, "F")
+
+A_B <- A-B
+A_Bf <- norm(A_B, "F")
+1-(A_Bf/(Af+Bf)) #0.6855269
+(A_Bf/(Af+Bf)) #0.3144731
+```
+
+
+```{r}
+s <- 0.9+0.8+0.5+0.2 
+0.9*100/2.4
+```
+```{r}
+corr.plots(field, df = i.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = ii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iii.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = iv.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+corr.plots(field, df = v.df, xlim, ylim, zlim, filter = 0.1,
+           show.plot.field = F,
+           plot.order = 2)
+
+i.df <- i.df %>% mutate(ln.field = log(field))
+ii.df <- ii.df %>% mutate(ln.field = log(field))
+i.df <- i.df %>% mutate(ln.field = ln(field))
+
+ggplot(data = i.df, aes(x = dist, y = field)) +
+  geom_line(data = iii.df, aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df, aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df, aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df, aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+
+
+
+```
+```{r}
+prior.sigma = c(3.00, 0.01)
+xlim = (c(-950, -900))
+ylim = (c(2870,2890))
+zlim = c(0.1,1)
+##i
+i <- list()
+i.df <- list()
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[1]]$corr
+i.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+ii <- list()
+ii.df <- list()
+prior.range <- c(21.0*0.3,  0.5)
+range.fraction <- c(1, 1)
+ii[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[1]]$corr
+ii.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+iii <- list()
+iii.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.3)
+iii[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[1]]$corr
+iii.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+iv <- list()
+iv.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.3)
+iv[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[1]]$corr
+iv.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+v <- list()
+v.df <- list()
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[1]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[1]]$corr
+v.df[[1]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[1]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[1]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[1]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[1]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[1]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[2]]$corr
+i.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.5,  0.5)
+range.fraction <- c(1, 1)
+ii[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[2]]$corr
+ii.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.5)
+iii[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[2]]$corr
+iii.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.5)
+iv[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[2]]$corr
+iv.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[2]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[2]]$corr
+v.df[[2]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[2]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[2]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[2]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[2]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[2]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[3]]$corr
+i.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.8,  0.5)
+range.fraction <- c(1, 1)
+ii[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[3]]$corr
+ii.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.8)
+iii[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[3]]$corr
+iii.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.8)
+iv[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[3]]$corr
+iv.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[3]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[3]]$corr
+v.df[[3]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[3]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[3]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[3]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[3]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[3]], aes(x = dist, y = field)) +
+  ylim(c(0.7,1)) + xlim(c(0,4))
+
+```
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[4]]$corr
+i.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.2,  0.5)
+range.fraction <- c(1, 1)
+ii[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[4]]$corr
+ii.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.2)
+iii[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[4]]$corr
+iii.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.2)
+iv[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[4]]$corr
+iv.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[4]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[4]]$corr
+v.df[[4]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[4]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[4]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[4]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[4]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[4]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+
+```
+```{r}
+##i
+prior.range <- c(21,  0.5)
+range.fraction <- c(1, 1)
+i[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- i[[5]]$corr
+i.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+#ii
+prior.range <- c(21.0*0.1,  0.5)
+range.fraction <- c(1, 1)
+ii[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii[[5]]$corr
+ii.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##iii
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(1, 0.1)
+iii[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iii[[5]]$corr
+iii.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+#iv
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.1)
+iv[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv[[5]]$corr
+iv.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+##v
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 1)
+v[[5]] <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- v[[5]]$corr
+v.df[[5]] <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ggplot(data = i.df[[5]], aes(x = dist, y = field)) +
+  geom_line(data = iii.df[[5]], aes(x = dist, y = field), color = "red1", alpha = 1) +
+  geom_line(data = iv.df[[5]], aes(x = dist, y = field), color = "blue1", alpha = 0.5) +
+  geom_line(data = v.df[[5]], aes(x = dist, y = field), color = "lightblue1", alpha = 0.8) +
+  geom_line() +
+  geom_line(data = ii.df[[5]], aes(x = dist, y = field)) +
+  ylim(c(0.5,1)) + xlim(c(0,10))
+```
+
+
+
+```{r}
+ii.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+i.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+iv.df08 <- iv.df[[4]] %>% dplyr::filter(field > .79 & field < .81)
+max(iv.df08[,3])
+min(iv.df08[,3])
+
+n <- list()
+b <- list()
+ratio <- list()
+
+b[[4]] <- ii.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[4]] <- i.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[4]] <- b[[4]][,4]/n[[4]][,4]
+
+iv.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+i.df[[4]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+
+b[[1]] <- ii.df[[1]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[1]] <- i.df[[1]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[1]] <- b[[1]][,4]/n[[1]][,4]
+
+b[[2]] <- ii.df[[2]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[2]] <- i.df[[2]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[2]] <- b[[2]][,4]/n[[2]][,4]
+
+b[[3]] <- ii.df[[3]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[3]] <- i.df[[3]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[3]] <- b[[3]][,4]/n[[3]][,4]
+
+b[[5]] <- ii.df[[5]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+n[[5]] <- i.df[[5]] %>% dplyr::filter(dist > .999 & dist < 1.001)
+ratio[[5]] <- b[[5]][,4]/n[[5]][,4]
+
+####
+
+st <- 1-ratio[[5]]
+norm.ratio <- list()
+for (i in 1:4) {
+  norm.ratio[[i]] <- (ratio[[i]]-st)/st
+}
+```
+
+```{r}
+b[[4]] <- ii.df[[4]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[4]] <- i.df[[4]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[4]] <- b[[4]][,4]/n[[4]][,4]
+
+b[[1]] <- ii.df[[1]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[1]] <- i.df[[1]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[1]] <- b[[1]][,4]/n[[1]][,4]
+
+b[[2]] <- ii.df[[2]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[2]] <- i.df[[2]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[2]] <- b[[2]][,4]/n[[2]][,4]
+
+b[[3]] <- ii.df[[3]] %>% dplyr::filter(dist > .099 & dist < .11)
+n[[3]] <- i.df[[3]] %>% dplyr::filter(dist > .099 & dist < .11)
+ratio[[3]] <- b[[3]][,4]/n[[3]][,4]
+
+ratio
+```
+
+
+Meeting Elias
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = c(1, 2, 3)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.3, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+for(i in 1:3){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:3, lty = 1)
+
+```
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = c(1, 2, 3, 10)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.1, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+for(i in 1:4){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:4, lty = 1)
+```
+
+```{r}
+fratio = function(p, r0 = 1, h = r0 * 0.3) {
+  r1.e = log(p)/(r0 - h)
+  r0.W = optimize(function(r) {
+    c.r = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  return(c(r0.W$minimum, E=r1.e))
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+
+```{r}
+fratio = function(p, r0 = 5, h = r0 * 0.1) {
+  r.W = optimize(function(r) {
+    c.r = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  fract = r.W$minimum/r0
+  attr(fract, "ranges") = c("normal" = r0, "barrier"=r.W$minimum)
+  return(fract)
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+
+
+
+####
+NEW
+
+Meeting with Elias
+
+The range is the number of units at which the correlation is ~0.1
+Now, this doesn't work much if a barrier is very narrow, hence the distance is very short where the number of units at which the correlation is ~0.1 is meaningless, e.g. range is 4 units and the island is 0.5 units.
+
+So what I am proposing is choosing a correlation ratio at a short distance (or any distance) and the calculate the range fraction given this ratio.
+
+Another way to explain it:
+the normal range is the number of units at which the corr is ~0.1, let's scale this number of units, i.e. distance to 1. Now the barrier range is the "new" distance at which the corr will be ~0.1, and it is obviously a fraction of the normal range, i.e. a fraction of the normal number of units.
+I cannot simply take this range fraction (that actually fixes corr at 0.2 and varies the distance) because of what I mentioned before, and I cannot fix the correlation at 0.8 (for example) because of the Matérn correlation (I don't know if there's a simple way to do it, but I just can't).
+Then, what I do is 
+a) fix the distance as a fraction of the normal range (which again is just a distance).
+b) choose a correlation ratio at this distance.
+c) get the barrier range that would give me *this* ratio at *this* distance.
+
+Here, there's no choosing two points at getting the correlation for those, and more like taking everything as normal or barrier area. 
+
+PLOTS
+corr vs distance varying $\kappa$, $range = \frac{\sqrt{8}}{\kappa}$
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = seq(1, 5, 1)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.3, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l", ylab = "corr")
+
+for(i in 1:length(kappas)){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:3, lty = 1)
+
+```
+
+corr vs distance varying the range $\kappa = \frac{\sqrt{8}}{range}$
+
+```{r}
+Distance <- seq(0, 2, .01)
+ranges <- seq(0.1, 1, by = 0.2)
+kappas = sqrt(8)/ranges
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.3, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+
+for(i in 1:length(kappas)){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:3, lty = 1)
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+Distance <- seq(0, 5, .1)
+kappas = c(1, 2, 3, 10)
+ranges = sqrt(8)/kappas
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.1, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l")
+for(i in 1:4){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:4, lty = 1)
+```
+
+```{r}
+fratio = function(p, r0 = 1, h = r0 * 0.3) {
+  r1.e = log(p)/(r0 - h)
+  r0.W = optimize(function(r) {
+    c.r = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = INLA::inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  return(c(r0.W$minimum, E=r1.e))
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+
+```{r}
+fratio = function(p, r0 = 5, h = r0 * 0.1) {
+  r.W = optimize(function(r) {
+    c.r = inla.matern.cov(nu = 1, kappa = sqrt(8)/r, x = h, d = 2, corr = TRUE)
+    c.r0 = inla.matern.cov(nu = 1, kappa = sqrt(8)/r0, x = h, d = 2, corr = TRUE)
+    #print(c(c.r, c.r0))
+    abs(c.r/c.r0 - p)
+  }, c(0, r0))
+  fract = r.W$minimum/r0
+  attr(fract, "ranges") = c("normal" = r0, "barrier"=r.W$minimum)
+  return(fract)
+}
+fratio(0.5)
+fratio(0.7)
+```
+
+After meeting Havard on Dec 11
+
+He didn't like the correlation ration and preferred the range ratio at higher correlation like 0.8
+So then I'm back to what I was thinking before, which is:
+If I get the corr vs dist curve I see that dist at corr 0.2 for case ii) over case i) is 0.3 approx, which makes sense since it's the definition of range fraction.
+Now, the new definition (transparency) would be this ratio at corr 0.8.
+1. I get the corr vs dist curve, and get the distance at correlation 0.8 for case i) and ii)
+2. do the ratio
+
+Distance at corr 0.2 it's actually range -number of units (dist) at which corr is 0.2
+Now ratio at this 0.8 corr is transparency.
+
+There's no math whatsoever (I think) since I'm no messing with any formula and only "changing" this definition to then get the range fraction at 0.2 and plug it in the matern cov function.
+
+The thing is then how to pass from this ratio to getting the range fraction I'll use for the SPDE
+
+What I would do is: curve is corr vs dist
+1. choose the ratio at corr 0.8, let's say 0.5
+2. The curve for the non barrier case is fixed, and depends only on the choice of prior for the range.
+3. Get the dist at 0.8 for the non barrier case. Let's say the dist is 2 units
+4. To get a ratio of 0.5 I need the barrier curve to pass through 1 at corr 0.8.
+5. draw the curve that gives me this value.
+6. Now, get the corr for both curves at 0.2 and do the ratio.
+7. The last ratio is the range fraction.
+
+Since all of this is done in ideal scenarios -case i and ii take either the range fraction to be 1 or 0.3 in the entire area- I don't need to worry about the 3D case and just worry about the 2D case, i.e. I don't need to do $a^2+b^2=c^2$
+
+```{r}
+Distance <- seq(0, 5, .1)
+ranges <- seq(1, 4, .5)
+kappas = sqrt(8)/ranges
+csmall = INLA:::inla.matern.cov(nu = 1, kappa = kappas, x = 0.1, d = 2, corr = TRUE)
+csmall
+plot(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[1], x = Distance, d = 2, corr = TRUE), 
+     bty = "n", type = "l", ylab = "corr")
+for(i in 1:length(kappas)){
+ lines(Distance, INLA:::inla.matern.cov(nu = 1, kappa = kappas[i], x = Distance, d = 2, corr = TRUE), col = 1 + i)
+}
+legend("topright", paste(kappas, ", ", format(ranges, digits = 2), format(csmall, digits = 2)), 
+       title = expression(kappa~r~csmall), 
+       bty = "n", col = 1:4, lty = 1)
+```
+
+```{r}
+filter <- 0.19
+i.df_ <- i.df %>% dplyr::filter(field > filter)
+ii.df_ <- ii.df %>% dplyr::filter(field > filter)
+
+gg.fd <- ggplot(data = i.df_, aes(x = field, y = dist)) +
+  geom_line(linewidth = 1, colour = "red1") +
+  geom_line(data = ii.df_, aes(x = field, y = dist), 
+            linewidth = 1, colour = "orange1")
+
+gg.df <- ggplot(data = i.df_, aes(y = field, x = dist)) +
+  geom_line(linewidth = 1, colour = "red1") +
+  geom_line(data = ii.df_, aes(y = field, x = dist), 
+            linewidth = 1, colour = "orange1")
+
+gridExtra::grid.arrange(gg.fd, gg.df)
+```
+
+```{r}
+x.i <- i.df_$dist
+y.i <- i.df_$field
+
+x.ii <- ii.df_$dist
+y.ii <- ii.df_$field
+
+
+
+#fit spline regression model
+spline_fit <- lm(y.i ~ bs(x.i))
+spline_fit.ii <- lm(y.ii ~ bs(x.ii))
+lm_fit <- lm(y.i ~ x.i)
+
+#view summary of spline regression model
+summary(spline_fit)
+
+# Visualize the data and fitted spline
+plot(x.i, y.i, main = "Spline Regression", xlab = "Dist", ylab = "field")
+lines(x.i, predict(lm_fit), col = "lightblue", lwd = 2)
+lines(x.i, predict(spline_fit), col = "red", lwd = 2)
+lines(x.ii, y.ii, col = "black", lwd = 2)
+lines(x.ii, predict(spline_fit.ii), col = "orange1", lwd = 2)
+legend("topright", legend = "Fitted Spline", col = "red", lwd = 2)
+```
+
+field on x axis
+
+```{r}
+#fit spline regression model
+spline_fit <- lm(x.i ~ bs(y.i))
+spline_fit.ii <- lm(x.ii ~ bs(y.ii))
+lm_fit <- lm(x.i ~ y.i)
+
+#view summary of spline regression model
+summary(spline_fit)
+
+# Visualize the data and fitted spline
+plot(y.i, x.i, main = "Spline Regression", xlab = "field", ylab = "Dist")
+lines(y.i, predict(lm_fit), col = "lightblue", lwd = 2)
+lines(y.i, predict(spline_fit), col = "red", lwd = 2)
+lines(y.ii, x.ii, col = "black", lwd = 2)
+lines(y.ii, predict(spline_fit.ii), col = "orange1", lwd = 2)
+legend("topright", legend = "Fitted Spline", col = "red", lwd = 2)
+```
+
+```{r}
+pred.i <- predict(spline_fit, newdata = list(y.i = c(0.2, 0.8)))
+pred.ii <- predict(spline_fit.ii, newdata = list(y.ii = c(0.2, 0.8)))
+pred.ii[1]/pred.i[1]
+pred.ii[2]/pred.i[2]
+```
+```{r}
+prior.range <- c(21.0*0.5,  0.5)
+range.fraction <- c(1, 1)
+ii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii$corr
+ii.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ii.df_ <- ii.df %>% dplyr::filter(field > filter)
+
+x.ii <- ii.df_$dist
+y.ii <- ii.df_$field
+
+#fit spline regression model
+spline_fit.ii <- lm(x.ii ~ bs(y.ii))
+
+# Visualize the data and fitted spline
+plot(y.i, x.i, main = "Spline Regression, rb = 0.5", xlab = "field", ylab = "Dist")
+lines(y.i, predict(lm_fit), col = "lightblue", lwd = 2)
+lines(y.i, predict(spline_fit), col = "red", lwd = 2)
+lines(y.ii, x.ii, col = "black", lwd = 2)
+lines(y.ii, predict(spline_fit.ii), col = "orange1", lwd = 2)
+
+pred.ii <- predict(spline_fit.ii, newdata = list(y.ii = c(0.2, 0.8)))
+pred.ii[1]/pred.i[1]
+pred.ii[2]/pred.i[2]
+```
+```{r}
+prior.range <- c(21.0*0.7,  0.5)
+range.fraction <- c(1, 1)
+ii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii$corr
+ii.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ii.df_ <- ii.df %>% dplyr::filter(field > filter)
+
+x.ii <- ii.df_$dist
+y.ii <- ii.df_$field
+
+#fit spline regression model
+spline_fit.ii <- lm(x.ii ~ bs(y.ii))
+
+# Visualize the data and fitted spline
+plot(y.i, x.i, main = "Spline Regression, rb = 0.7", xlab = "field", ylab = "Dist")
+lines(y.i, predict(lm_fit), col = "lightblue", lwd = 2)
+lines(y.i, predict(spline_fit), col = "red", lwd = 2)
+lines(y.ii, x.ii, col = "black", lwd = 2)
+lines(y.ii, predict(spline_fit.ii), col = "orange1", lwd = 2)
+
+pred.ii <- predict(spline_fit.ii, newdata = list(y.ii = c(0.2, 0.8)))
+pred.ii[1]/pred.i[1]
+pred.ii[2]/pred.i[2]
+
+```
+
+```{r}
+prior.range <- c(21.0*0.2,  0.5)
+range.fraction <- c(1, 1)
+ii <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- ii$corr
+ii.df <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+ii.df_ <- ii.df %>% dplyr::filter(field > filter)
+
+x.ii <- ii.df_$dist
+y.ii <- ii.df_$field
+
+#fit spline regression model
+spline_fit.ii <- lm(x.ii ~ bs(y.ii))
+
+# Visualize the data and fitted spline
+plot(y.i, x.i, main = "Spline Regression, rb = 0.2", xlab = "field", ylab = "Dist")
+lines(y.i, predict(lm_fit), col = "lightblue", lwd = 2)
+lines(y.i, predict(spline_fit), col = "red", lwd = 2)
+lines(y.ii, x.ii, col = "black", lwd = 2)
+lines(y.ii, predict(spline_fit.ii), col = "orange1", lwd = 2)
+
+pred.ii <- predict(spline_fit.ii, newdata = list(y.ii = c(0.2, 0.8)))
+pred.ii[1]/pred.i[1]
+pred.ii[2]/pred.i[2]
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

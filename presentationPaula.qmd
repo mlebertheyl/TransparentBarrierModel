@@ -1,0 +1,660 @@
+---
+title: ""
+title-slide-attributes:
+  data-background-size: contain
+  data-background-opacity: "1"
+format: revealjs
+smaller: true
+scrollable: true
+logo: icons/dugong.png
+editor: visual
+---
+
+```{r, include=FALSE}
+library(citr)
+library(magick)
+```
+
+```{r ba, echo=FALSE}
+image_read("/Users/martinale-bertheyl/Documents/Research/proposal/bookdown-demo-main/ppt/4copy/1.png")
+```
+
+
+
+#### Abstract
+
+In the presence of physical barriers, the assumption of stationarity for Spatial Gaussian fields (SGFs) no longer holds. However, the models proposed for non-stationary cases assume all barriers are impermeable, which is quite restrictive when barriers are of different natures. For applications requiring a model that includes barriers with different permeability, the Transparent Barrier model is proposed.
+
+#### Motivation
+
+Consider fish in shallow waters. An impermeable barrier would be a set of islands that fish cannot cross. However, sand patches with little water coverage are not fully impermeable; fish can cross them, but less frequently than non-barrier areas.
+
+##
+
+### A (very brief) Summary of the Projects
+
+#### Project 1:
+
+-   Develop a model explicitly considering "obstacles" in space to model species distribution.
+-   Retain computational efficiency inherent to stationary models.
+-   Interpretation that relies on intuition for the parameters.
+
+#### Project 2:
+
+-   Implement the model in R-INLA.
+-   Study Marine Megafauna on the Red Sea Coast
+
+#### Project 3:
+
+-   Applying our model in different sampling schemes like line transect surveys.
+-   Consider distance sampling framework where detection depends on the distance from the observer or transect line.
+
+##
+
+### Project 1/Proposal
+
+#### The (re-parametrized) Matérn Covariance Function   
+
+$$
+\text{Cov}\left(x(s_i), x(s_j)\right) = \sigma_x^2 \left( \frac{d \sqrt{8}}{r} \right) K_1 \left( \frac{d \sqrt{8}}{r} \right)
+$$
+
+where $r = \frac{\rho}{\sqrt{8}}$ is the range parameter,
+$d = \|s_i - s_j\|$ the Euclidean distance between points $s_i$ and $s_j$, $\sigma_x^2$ the marginal sd, and $K_{1}$ the modified Bessel function of the second kind.
+
+#### The (re-parametrized) SPDE  
+
+$$
+x(s) - \nabla \cdot \frac{r^2}{8} \nabla x(s) = r \sqrt{\frac{\pi}{2}} \sigma_x \mathcal{W}(s)
+$$
+
+where $x(s)$ is the Gaussian field for $s \in \Omega \subseteq \mathbb{R}^2$, $\nabla = \left( \frac{\partial}{\partial x}, \frac{\partial}{\partial y} \right)$, and $\mathcal{W}(s)$ is white noise.
+
+## 
+
+#### The Transparent Barrier Model
+
+
+$$
+\begin{aligned}
+& x(s) - \nabla \cdot \frac{r_n^2}{8} \nabla x(s) = r_n \sqrt{\frac{\pi}{2}} \sigma_x \mathcal{W}(s), \text{ for } s \in \Omega_n \\
+& x(s) - \nabla \cdot \frac{r_{b_1}^2}{8} \nabla x(s) = r_{b_1} \sqrt{\frac{\pi}{2}} \sigma_x \mathcal{W}(s), \text{ for } s \in \Omega_{b_1} \\
+& x(s) - \nabla \cdot \frac{r_{b_2}^2}{8} \nabla x(s) = r_{b_2} \sqrt{\frac{\pi}{2}} \sigma_x \mathcal{W}(s), \text{ for } s \in \Omega_{b_2} \\
+& \vdots \\
+& x(s) - \nabla \cdot \frac{r_{b_l}^2}{8} \nabla x(s) = r_{b_l} \sqrt{\frac{\pi}{2}} \sigma_x \mathcal{W}(s), \text{ for } s \in \Omega_{b_l}
+\end{aligned}
+$$
+
+where $r_n$ is the range parameter for the normal area, and $r_{b_1}$ to $r_{b_l}$ are the range parameters for the barrier areas with different permeability or transparency. The disjoint union of $\Omega_n$ and all $\Omega_{b_i}$ give the study area $\Omega$. 
+
+##
+
+### Ph.D. Proposal timeline
+
+```{r, echo=FALSE, fig.cap= "Ph.D. Proposal timeline."}
+magick::image_read("plots/timeline/old.timeline.png")
+#magick::image_read("plots/timeline/timeline2.png")
+```
+
+## 
+### Project 1/After Proposal
+
+#### Transparency (1)
+
+The ratio between the correlation of two adjacent considering a barrier and the correlation of the same two points as if there were no barrier, $$
+\frac{Corr_{b}}{Corr_{nb}} \sim \frac{Corr_{b}}{1} = c
+$$ where $c$ corresponds to the transparency, which is a fixed ratio between 0 and 1. Transparency is introduced as a way to numerically characterize permeability.
+
+```{r, echo=FALSE, out.width="30%", fig.cap="Example of points used to calculate transparency, c."}
+image_read("/Users/martinale-bertheyl/Documents/Research/proposal/bookdown-demo-main/ppt/4copy/points3.png")
+```
+##
+
+#### Transparency (2)
+
+##### The Barrier model:
+
+**the correlation between two points that are** $r$ **units apart is near 0.1**
+
+$$\frac{r_{n}}{h}  = r_{b}$$
+
+$r_n$ is the range parameter for the normal area, $r_b$ is the range parameter for the barrier, and it is a fixed fraction of $r_n$ so that $r_b=r_n/h$, where $h$ is a constant (e.g. $10$).
+
+##### The Transparent Barrier model
+
+**the correlation between two points that are** $r_{n_{0.8}}$ **units apart is near 0.8**
+
+$$\frac{r_{n_{0.8}}}{h_{0.8}}  = r_{b_{0.8}}$$
+$r_{n_{0.8}}$ is the range parameter for the normal area, $r_{b_{0.8}}$ is the range parameter for the barrier, and it is a fixed fraction of $r_{n_{0.8}}$ so that $r_{b_{0.8}}=r_{n_{0.8}}/h_{0.8}$, where $h_{0.8}$ is a constant.
+
+##
+
+### Ex Project 2, now part of Project 1
+
+
+#### Application: The Saudi Arabian Red Sea coast
+
+
+```{r, include = FALSE}
+library(leaflet)
+library(leafpop)
+library(leaflet.extras)
+library(htmltools)
+library(sf)
+library(tidyverse)
+library(rnaturalearth)
+library(lattice)
+library(htmlwidgets)
+library(widgetframe)
+library(shiny)
+library(sp)
+library(mapdata)
+library(maptools)
+library(rgeos)
+library(raster)
+library(terra)
+require(devtools)
+library(fields)
+library(terra)
+library(ggplot2)
+library(scales)
+```
+
+```{r, include = FALSE}
+# from chunk 1 and 2 in "mybath_explore"
+# from chunk 1:
+# load data w/ raster lib
+dng_icon <- "dng.data/dugong.png"
+
+bathym_ <- raster("dng.data/RSPbathym100m.tif")
+crs_longlat <- CRS("+proj=longlat +datum=WGS84")
+crs_km <- CRS("+proj=utm +zone=39 ellps=WGS84 +units=km")
+bathym_longlat <- projectRaster(bathym_, crs = crs_longlat)
+bathym_km <- projectRaster(bathym_, crs = crs_km)
+
+# Data for all species from helicopter surveys.
+Data_allspp <- readRDS("dng.data/RSP_survey_sightings.rds")
+# Data Incidental Sightings Dugongs
+
+Data_ISD <- readRDS("dng.data/incidental_sightings_dugongs.rds")
+
+# Data for the 10 different species. 
+# The list number corresponds to sppID, e.g. species 7 is spp[[7]]
+spp_ <- 10
+spp <- list()
+for (s in 1:spp_) {
+  data <- Data_allspp %>% filter(sp_grp_nam == paste0("spp", as.character(s)))
+  spp[[s]] <- data
+}
+# e.g. species 7 is spp[[7]]
+spp[[7]]
+
+# RUN myData, and generic functions FIRST
+# Data for all species from helicopter surveys.
+# Data_allspp <- readRDS("RSP_survey_sightings.rds")
+# Data for DUGONG
+# Data Incidental Sightings Dugongs
+# Data_ISD <- readRDS("incidental_sightings_dugongs.rds")
+
+Data_7spp <- spp[[7]]
+
+# bind ISD with Survey helicopter data
+# Dugong is the only one that has data coming from 2 sources.
+Data_ISD_ <-dplyr::select(Data_ISD, c(Lat, Long, geometry)) %>% 
+  rename(lat = Lat, long = Long) %>% 
+  mutate(method = "ISD")
+```
+
+```{r, include = FALSE}
+spp7 <- dplyr::select(Data_7spp, c(lat, long, geometry)) %>% 
+  mutate(method = "Survey")
+all_dugong <- rbind(Data_ISD_, spp7)
+st_crs(Data_ISD_)
+Data_ISD <- st_transform(Data_ISD_, crs_km)
+cords_Dng.xy <- st_coordinates(Data_ISD)
+cords_Dng.sp <- SpatialPoints(cords_Dng.xy, proj4string = crs_km)
+```
+
+```{r, echo=FALSE, include=FALSE}
+#plot1
+leaflet() %>% 
+  setView(lng = median(Data_ISD$long), lat = median(Data_ISD$lat), zoom = 8) %>%
+  addProviderTiles(providers$OpenStreetMap, group = "Open Street Map") %>% 
+  # Add additional basemap layers
+  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI World Imagery") %>% 
+  addProviderTiles(providers$Esri.OceanBasemap, group = "ESRI Ocean Basemap") %>% 
+  # Add a User-Interface (UI) control to switch layers
+  addLayersControl(
+    baseGroups = c("Open Street Map","ESRI World Imagery","ESRI Ocean Basemap"),
+    options = layersControlOptions(collapsed = FALSE))
+```
+
+```{r}
+#plot_dng1
+leaflet() %>% 
+  setView(lng = mean(Data_ISD$long), lat = mean(Data_ISD$lat), zoom = 8) %>%
+  addProviderTiles(providers$OpenStreetMap, group = "Open Street Map") %>% 
+  # Add additional basemap layers
+  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI World Imagery") %>% 
+  addProviderTiles(providers$Esri.OceanBasemap, group = "ESRI Ocean Basemap") %>% 
+  # Add a User-Interface (UI) control to switch layers
+  addLayersControl(
+    baseGroups = c("Open Street Map","ESRI World Imagery","ESRI Ocean Basemap"),
+    options = layersControlOptions(collapsed = FALSE)) %>%
+  addMarkers(lng = Data_ISD$long, lat = Data_ISD$lat, group = "Dugong",
+             icon = 
+               list(iconUrl = dng_icon,
+                    iconSize = c(20,20)))
+
+```
+
+##
+
+#### The Study Area
+
+```{r, echo=FALSE, fig.cap="Bathymetry map for the the entire study area (top left); the normal area (top right); the islands (bottom left); and deep sea (bottom right)."}
+q <- magick::image_read("plots/area1.png")
+w <- magick::image_read("plots/area2.png")
+a <- image_append(c(q,w), stack = F)
+e <- magick::image_read("plots/area3.png")
+r <- magick::image_read("plots/area4.png")
+s <- image_append(c(e,r), stack = F)
+image_append(c(a,s), stack = T)
+```
+
+##
+
+#### The Mesh
+
+```{r, echo=FALSE, fig.cap= "Delaunay triangulation for the study area. The entire mesh is on the left, and the zoomed in area on the middle and right."}
+
+q <- magick::image_read("plots/mesh.dng50.png")
+w <- magick::image_read("plots/mesh.dng50zoom1.png")
+e <- magick::image_read("plots/mesh.dng50zoom4.png")
+
+
+image_append(c(q,w,e), stack = F)
+```
+
+##
+
+#### Visualizing the Different Models
+
+```{r, echo=FALSE, fig.cap="Mesh with points used for evaluating correlation with different range fractions."}
+a <- magick::image_read("plots/mesh.points.png")
+image_scale(a, "1000")
+```
+
+##
+
+#### Group 1, red dots
+
+```{r, echo=FALSE, fig.cap="Correlation plots for group of red points. Range fractions 0.01, 0.3, 0.7, and 1 in rows from top to bottom."}
+###0 = fr1
+q <- magick::image_read("plots/points_dng/point1/fr0.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+a <- image_append(c(w,e,q), stack = F)
+aa <- image_append(c(t,y,u), stack = F)
+aaa <- image_append(c(i,p,o), stack = F)
+
+###fr 0.8
+q <- magick::image_read("plots/points_dng/point1/fr0.8.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.8.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.8.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.8.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.8.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.8.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.8.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.8.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.8.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.8.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+s <- image_append(c(w,e,q), stack = F)
+ss <- image_append(c(t,y,u), stack = F)
+sss <- image_append(c(i,p,o), stack = F)
+
+
+###fr 0.7
+q <- magick::image_read("plots/points_dng/point1/fr0.7.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.7.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.7.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.7.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.7.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.7.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.7.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.7.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.7.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.7.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+d <- image_append(c(w,e,q), stack = F)
+dd <- image_append(c(t,y,u), stack = F)
+ddd <- image_append(c(i,p,o), stack = F)
+
+
+###fr 0.5
+q <- magick::image_read("plots/points_dng/point1/fr0.5.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.5.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.5.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.5.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.5.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.5.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.5.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.5.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.5.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.5.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+f <- image_append(c(w,e,q), stack = F)
+ff <- image_append(c(t,y,u), stack = F)
+fff <- image_append(c(i,p,o), stack = F)
+
+###fr 0.3
+q <- magick::image_read("plots/points_dng/point1/fr0.3.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.3.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.3.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.3.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.3.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.3.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.3.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.3.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.3.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.3.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+g <- image_append(c(w,e,q), stack = F)
+gg <- image_append(c(t,y,u), stack = F)
+ggg <- image_append(c(i,p,o), stack = F)
+
+###fr 0.2
+q <- magick::image_read("plots/points_dng/point1/fr0.2.png")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.2.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.2.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.2.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.2.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.2.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.2.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.2.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.2.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.2.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+h <- image_append(c(w,e,q), stack = F)
+hh <- image_append(c(t,y,u), stack = F)
+hhh <- image_append(c(i,p,o), stack = F)
+
+
+###fr 0.01
+q <- magick::image_read("plots/points_dng/point1/fr0.01.png")
+#q <- magick::image_crop(q, geometry = "480x390+00+50")
+q <- magick::image_crop(q, geometry = "480x390+00+50")
+
+w <- magick::image_read("plots/points_dng/point2/fr0.01.png")
+w <- magick::image_crop(w, geometry = "410x390+00+50")
+
+e <- magick::image_read("plots/points_dng/point3/fr0.01.png")
+e <- magick::image_crop(e, geometry = "410x390+00+50")
+
+r <- magick::image_read("plots/points_dng/point4/fr0.01.png")
+r <- magick::image_crop(r, geometry = "410x390+00+50")
+
+t <- magick::image_read("plots/points_dng/point5/fr0.01.png")
+t <- magick::image_crop(t, geometry = "410x390+00+50")
+
+y <- magick::image_read("plots/points_dng/point6/fr0.01.png")
+y <- magick::image_crop(y, geometry = "410x390+00+50")
+
+u <- magick::image_read("plots/points_dng/point7/fr0.01.png")
+u <- magick::image_crop(u, geometry = "480x390+00+50")
+
+i <- magick::image_read("plots/points_dng/point8/fr0.01.png")
+i <- magick::image_crop(i, geometry = "410x390+00+50")
+
+o <- magick::image_read("plots/points_dng/point9/fr0.01.png")
+o <- magick::image_crop(o, geometry = "480x390+00+50")
+
+p <- magick::image_read("plots/points_dng/point10/fr0.01.png")
+p <- magick::image_crop(p, geometry = "410x390+00+50")
+
+j <- image_append(c(w,e,q), stack = F)
+jj <- image_append(c(t,y,u), stack = F)
+jjj <- image_append(c(i,p,o), stack = F)
+
+#image_append(c(a,d,g,j), stack = T)
+image_append(c(j,g,d,a), stack = T)
+```
+
+##
+
+#### Group 2, green dots
+
+```{r, echo=FALSE, fig.cap="Correlation plots for group of green points. Range fractions 0.01, 0.3, 0.7, and 1 in rows from top to bottom."}
+#image_append(c(aa,dd,gg,jj), stack = T)
+image_append(c(jj,gg,dd,aa), stack = T)
+```
+
+##
+
+#### Group 3, blue dots
+
+```{r, echo=FALSE, fig.cap="Correlation plots for group of blue points. Range fractions 0.01, 0.3, 0.7, and 1 in rows from top to bottom."}
+#image_append(c(aaa,ddd,ggg,jjj), stack = T)
+image_append(c(jjj,ggg,ddd,aaa), stack = T)
+```
+
+##
+
+### Project 2
+
+#### Mammals Observer Surveys
+
+```{r, echo=FALSE, out.width="50%", fig.cap= "Dugongs (left), dolphins (right), and overall (bottom) sightings during drone and MMO Surveys showing the bathymetry of the project area and spatial overlap of sightings with the proposed vessel route. Zones of high risk (red line) and medium risk (orange line) where speed restrictions of <10 km/s should be implemented are shown, as well as recommended rerouting into deeper, open water areas"}
+#r <- magick::image_read("plots/mesh/geom1.2.mesh.png")
+#r <- magick::image_scale(r, "190")
+a <- magick::image_read("plots/map.data1.png")
+s <- magick::image_read("plots/survey4.png")
+w <- image_append(c(a,s), stack = F)
+q <- magick::image_read("plots/map.data2.png")
+image_append(c(w,q), stack = T)
+```
+
+
+
+```{r, echo=FALSE, include = FALSE, out.width="60%", fig.cap= "Overall sightings of dolphins during drone and MMO Surveys showing the bathymetry of the project area and spatial overlap of sightings with the proposed vessel route. Zones of high risk (red line) and medium risk (orange line) where speed restrictions of <10 km/s should be implemented are shown, as well as recommended rerouting into deeper, open water areas"}
+#r <- magick::image_read("plots/mesh/geom1.2.mesh.png")
+#r <- magick::image_scale(r, "190")
+magick::image_read("plots/survey4.png")
+```
+
+
+
+```{r, echo=FALSE, include=FALSE, out.width="60%", fig.cap= "Overall sightings of marine megafauna during drone and MMO Surveys showing the bathymetry of the project area and spatial overlap of sightings with the proposed vessel route. Zones of high risk (red line) and medium risk (orange line) where speed restrictions of <10 km/s should be implemented are shown, as well as recommended rerouting into deeper, open water areas"}
+
+magick::image_read("plots/map.data2.png")
+```
+
+
+##
+
+### Project 3
+
+#### Aerial Survey
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Aerial survey: transect footprint and data."}
+q <- magick::image_read("plots/map.data3.png")
+
+a <- magick::image_read("plots/map.data4.png")
+s <- magick::image_read("plots/map.data5.png")
+d <- magick::image_read("plots/map.data6.png")
+w <- image_append(c(a,s,d), stack = F)
+
+image_append(c(q,w), stack = T)
+```
+
+##
+
+#### Drone Survey
+
+```{r, echo=FALSE, fig.cap= "Drone survey and coverage in Sindalah area 2024 on the left, and Dugong sightings (30) from drone focal surveys on the right."}
+#r <- magick::image_read("plots/mesh/geom1.2.mesh.png")
+#r <- magick::image_scale(r, "190")
+a <- magick::image_read("plots/map.data.drona.png")
+s <- magick::image_read("plots/map.data.drona2.png")
+image_append(c(a,s), stack = F)
+```
+
+##
+
+#### Survey Transects
+
+```{r, echo=FALSE, out.width="30%", fig.cap= "Different survey transects Sindalah Islands."}
+a <- magick::image_read("plots/survey1.png")
+s <- magick::image_read("plots/survey2.png")
+d <- magick::image_read("plots/survey3.png")
+q <- image_append(c(s,d), stack = F)
+image_append(c(a,q), stack = T)
+```
+
+
+
+
+
+## 
+
+#### Ph.D. Proposal timeline, and new timeline
+
+```{r, echo=FALSE, out.width="90%"}
+magick::image_read("plots/timeline/old.timeline.png")
+magick::image_read("plots/timeline/new.timeline2.png")
+```
+
+## 
+
+
+
+
+
+
+
+
+
+

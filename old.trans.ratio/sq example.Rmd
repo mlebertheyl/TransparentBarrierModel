@@ -1,0 +1,852 @@
+## Example 5
+
+Spatial domain: rectangle
+Barrier: square inside rect.
+
+```{r}
+range = 2
+max.edge.length <- 0.4
+set.inla.seed <- 2303
+n <- 20
+
+poly1 <- local.square.polygon(xlim = c(4,6), ylim = c(4,6))
+poly.original <- SpatialPolygons(poly1@polygons)
+
+loc1 <- matrix(c(0,0, 10,0, 0,10, 10,10), 4, 2, byrow = T)
+
+seg <- inla.sp2segment(poly.original)
+
+mesh <- inla.mesh.2d(loc=loc1, interior = seg, 
+                    max.e = max.edge.length, offset=1)
+
+tl <- length(mesh$graph$tv[,1])
+# - the number of triangles in the mesh
+posTri <- matrix(0, tl, 2)
+
+for (t in 1:tl){
+  temp = mesh$loc[mesh$graph$tv[t, ], ]
+  posTri[t,] = colMeans(temp)[c(1,2)] 
+}
+posTri <- SpatialPoints(posTri)
+
+bar.original <- over(poly.original, SpatialPoints(posTri), returnList=T)
+bar.original <- unlist(bar.original)
+poly.bar.orginal <- inla.barrier.polygon(mesh, barrier.triangles = bar.original)
+
+# BARRIER 1 = poly.original
+bar1 <- over(poly1, SpatialPoints(posTri), returnList=T)
+bar1 <- unlist(bar1)
+poly.bar1 <- inla.barrier.polygon(mesh, barrier.triangles = bar1)
+
+#sum(bar1==bar.original) == length(bar1)
+
+mat <-  inla.barrier.fem.plus(mesh, list(bar1))
+
+xlim=c(4, 6)
+ylim=c(4, 6)
+
+xlim = range(xlim)
+ylim = range(ylim)
+
+corner1 = c(xlim[1], ylim[2])
+corner2 = c(xlim[2], ylim[1])
+
+poly1_h = Polygon(rbind(corner1, c(corner1[1], corner2[2]), corner2, c(corner2[1], corner1[2]), corner1), hole = TRUE)
+
+loc1 <- matrix(c(2,2, 8,2, 8,8, 2,8), 4, 2, byrow = T)
+
+locp <- Polygon(loc1, hole = FALSE)
+    
+poly.water <- SpatialPolygons(list(Polygons(list(locp, poly1_h), '0')))
+poly.water_sf <- st_as_sf(poly.water)
+
+set.seed(set.inla.seed)
+loc.data <- spsample(x = poly.water, n = n, type = "random")
+loc.data_sf <- st_as_sf(loc.data)
+loc.data <- loc.data@coords
+
+mesh_h <-inla.mesh.2d(boundary = poly.water_sf,
+                      max.e = max.edge.length, 
+                      offset=1)
+
+fem <- mat 
+barrier.triangles <- list(bar1)
+
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+
+ggplot(data = poly.water_sf) + 
+      inlabru::gg(mesh_h) + 
+      geom_sf(data =loc.data_sf,
+          col='purple',size=1.7,alpha=0.5) 
+```
+```{r}
+width <- 2 #in this case width in y and x is the same
+y.mid <- 5
+y.up <- y.mid + (width/2)
+y.low <- y.mid - (width/2)
+
+x.mid <- 5
+x.right <- x.mid + (width/2)
+x.left <- x.mid - (width/2)
+
+location <- matrix(c(c(5, x.mid), c(y.mid, 5)), ncol = 2)
+```
+
+```{r}
+# pair of points for top side of the barrier
+# x = 5, and I want to find the coordinates of the points on the y axis
+
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up + max.edge.length)), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector > y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector > y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.up <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+## lower point, i.e. point in barrier area
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],y.up), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up - max.edge.length/2)), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(location[1,1],(y.up - max.edge.length)), nrow=1, ncol=2))
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+A.y.vector <- c(mesh$loc[id.nodeA[[1]],][2],
+                  mesh$loc[id.nodeA[[2]],][2],
+                  mesh$loc[id.nodeA[[3]],][2])
+
+A.tmp <- A[[which(A.y.vector < y.up)[1]]]
+id.node <- id.nodeA[which(A.y.vector < y.up)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+return.list.low <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+
+return.list <- list(normal.point = return.list.up, barrier.point = return.list.low)
+
+coord.df_norm <- return.list$normal.point$id.coord
+coord.df_bar <- return.list$barrier.point$id.coord
+
+points_nb <- rbind(coord.df_norm, coord.df_bar)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+SpatialPoints(poly_nb@coords)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+
+ggplot(data = poly.water_sf) + 
+      inlabru::gg(mesh) + #plot mesh_hb alternatively
+      geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) 
+
+ggplot(data = poly.water_sf) + 
+      inlabru::gg(mesh) +
+  geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) +
+  ylim(c(5,7)) +
+  xlim(c(4,6))
+
+return.list.top <- return.list
+coord.df_norm.top <- coord.df_norm
+coord.df_bar.top <- coord.df_bar
+```
+
+```{r}
+# pair of points for left side of the barrier
+# y = 5, and I want to find the coordinates of the points on the x axis
+
+# x.left + ... is barrier area, and x.left -... is normal area
+# point inside the barrier area
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(x.left, location[2,2]), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c((x.left + max.edge.length/2), location[2,2]), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c((x.left + max.edge.length), location[2,2]), nrow=1, ncol=2))
+
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.x.vector <- c(mesh$loc[id.nodeA[[1]],][1],
+                  mesh$loc[id.nodeA[[2]],][1],
+                  mesh$loc[id.nodeA[[3]],][1])
+
+A.tmp <- A[[which(A.x.vector > x.left)[1]]]
+id.node <- id.nodeA[which(A.x.vector > x.left)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+return.list.up <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+# up on the x axis
+
+## point in normal area
+A <- list()
+A[[1]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c(x.left, location[2,2]), nrow=1, ncol=2))
+A[[2]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c((x.left - max.edge.length/2), location[2,2]), nrow=1, ncol=2))
+A[[3]] <- inla.spde.make.A(mesh=mesh,
+                     loc = matrix(c((x.left - max.edge.length), location[2,2]), nrow=1, ncol=2))
+id.nodeA <- c()
+id.nodeA[1] = which.max(A[[1]][1, ])
+id.nodeA[2] = which.max(A[[2]][1, ])
+id.nodeA[3] = which.max(A[[3]][1, ])
+
+# just to check the coordinates and compare to the plot above
+data.frame(x = c(mesh$loc[id.nodeA[1], 1], mesh$loc[id.nodeA[2], 1], mesh$loc[id.nodeA[3], 1]),
+           y = c(mesh$loc[id.nodeA[1], 2], mesh$loc[id.nodeA[2], 2], mesh$loc[id.nodeA[3], 2]))
+
+A.x.vector <- c(mesh$loc[id.nodeA[[1]],][1],
+                  mesh$loc[id.nodeA[[2]],][1],
+                  mesh$loc[id.nodeA[[3]],][1])
+
+A.tmp <- A[[which(A.x.vector < x.left)[1]]]
+id.node <- id.nodeA[which(A.x.vector < x.left)[1]]
+id.coord <- c(mesh$loc[id.node, 1], mesh$loc[id.node, 2])
+
+return.list.low <- list(A.tmp = A.tmp, id.coord = id.coord, id.node = id.node)
+```
+
+
+```{r}
+return.list <- list(normal.point = return.list.low, barrier.point = return.list.up)
+
+coord.df_norm <- return.list$normal.point$id.coord
+coord.df_bar <- return.list$barrier.point$id.coord
+
+points_nb <- rbind(coord.df_norm, coord.df_bar)
+rownames(points_nb) <- NULL
+colnames(points_nb) <- c("x", "y")
+points_nb <- as.matrix(points_nb)
+poly_nb <- Polygon(points_nb)
+SpatialPoints(poly_nb@coords)
+
+sp_points_nb <- SpatialPoints(poly_nb@coords)
+sf_points_nb <- st_as_sf(sp_points_nb)
+
+ggplot(data = poly.water_sf) + 
+      inlabru::gg(mesh) + #plot mesh_hb alternatively
+      geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) 
+
+ggplot(data = poly.water_sf) + 
+      inlabru::gg(mesh) +
+  geom_sf(data =sf_points_nb,
+          col='purple',size=1.7,alpha=0.5) +
+  ylim(c(4,6)) +
+  xlim(c(3,5))
+
+return.list.left <- return.list
+coord.df_norm.left <- coord.df_norm
+coord.df_bar.left <- coord.df_bar
+
+id.node <- list()
+id.coord <- list()
+in.id.node <- list()
+
+id.node[[1]] = return.list.top$normal.point$id.node
+id.node[[2]] = return.list.left$normal.point$id.node
+id.coord[[1]] = return.list.top$normal.point$id.coord
+id.coord[[2]] = return.list.left$normal.point$id.coord
+in.id.node[[1]] = return.list.top$barrier.point$id.node
+in.id.node[[2]] = return.list.left$barrier.point$id.node
+```
+
+### optim
+
+**top side**
+
+```{r}
+prior.range = c(1, 0.5)
+prior.sigma = c(1, 0.1)
+
+id.node = id.node[[1]]
+in.id.node = in.id.node[[1]]
+
+nb.model <- function(rbs, #rbs number of r_b
+                     id.node = id.node, 
+                     in.id.node = in.id.node) { 
+  
+  nb.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = rep(1, rbs))
+  
+  Q.nb <- inla.rgeneric.q(nb.model, "Q", 
+                          theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  corr.nb <- 
+    corr.from.Q.alltogether(Q = Q.nb,
+                            id.node = id.node,
+                            in.id.node = in.id.node)
+  
+  return(list(nb.model = nb.model, Q = Q.nb, corr = corr.nb))
+}
+
+corr.nb <- nb.model(rbs = 1,
+                    id.node = id.node, 
+                    in.id.node = in.id.node)$corr
+
+find.aimed.ratios_ <- function(x, 
+                               aimed.ratio,
+                               corr.nb) {
+  
+  barrier.model <- inla.barrier.pcmatern.plus(
+    mesh = mesh,
+    fem = fem,
+    barrier.triangles = barrier.triangles,
+    prior.range = prior.range,
+    prior.sigma = prior.sigma,
+    range.fraction = x)
+  
+  Q <- inla.rgeneric.q(
+    barrier.model, 
+    "Q",
+    theta = c(log(prior.sigma[1]), 
+              log(prior.range[1])))
+  
+  corr.bm <- corr.from.Q.alltogether(
+    Q = Q, 
+    id.node = id.node, 
+    in.id.node = in.id.node)
+  
+  corr <- c()
+  for (i in seq_along(corr.bm)) {
+    corr[i] <- corr.bm[[i]]/corr.nb[[i]]
+  }
+  
+  A <- diag(aimed.ratio, nrow = length(aimed.ratio))
+  B <- diag(corr, nrow = length(corr))
+  M <- A-B
+  mini <- norm(M, "F")
+  
+  return(mini)
+}
+
+## with corr nb = 1
+aim = 0.5
+par = rep(0.5, length(aim))
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = 1,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+```
+
+$par: [1] 1
+$value: [1] 0.2032115
+$counts: function gradient 
+       3        3 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+
+```{r}
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = corr.nb,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+```
+
+$par: [1] 0.4792988
+$value: [1] 1.363331e-06
+$counts: function gradient 
+      43       43 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
+
+#### more optim for this particular case
+
+```{r}
+find.aimed.ratios_(x=1, aimed.ratio = aim, corr.nb = 1) #0.2032115
+find.aimed.ratios_(x=0.9, aimed.ratio = aim, corr.nb = 1) #0.2208985
+find.aimed.ratios_(x=0.1, aimed.ratio = aim, corr.nb = 1) #0.5622385
+
+aim = 0.2
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = 1,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+
+aim = 0.7
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = 1,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+```
+
+**left side**
+
+```{r}
+prior.range = c(1, 0.5)
+prior.sigma = c(1, 0.1)
+
+id.node = id.node[[2]]
+in.id.node = in.id.node[[2]]
+
+nb.model <- function(rbs, #rbs number of r_b
+                     id.node = id.node, 
+                     in.id.node = in.id.node) { 
+  
+  nb.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range,
+                             prior.sigma,
+                             range.fraction = rep(1, rbs))
+  
+  Q.nb <- inla.rgeneric.q(nb.model, "Q", 
+                          theta = c(log(prior.sigma[1]), log(prior.range[1])))
+  
+  corr.nb <- 
+    corr.from.Q.alltogether(Q = Q.nb,
+                            id.node = id.node,
+                            in.id.node = in.id.node)
+  
+  return(list(nb.model = nb.model, Q = Q.nb, corr = corr.nb))
+}
+
+corr.nb <- nb.model(rbs = 1,
+                    id.node = id.node, 
+                    in.id.node = in.id.node)$corr
+
+find.aimed.ratios_ <- function(x, 
+                               aimed.ratio,
+                               corr.nb) {
+  
+  barrier.model <- inla.barrier.pcmatern.plus(
+    mesh = mesh,
+    fem = fem,
+    barrier.triangles = barrier.triangles,
+    prior.range = prior.range,
+    prior.sigma = prior.sigma,
+    range.fraction = x)
+  
+  Q <- inla.rgeneric.q(
+    barrier.model, 
+    "Q",
+    theta = c(log(prior.sigma[1]), 
+              log(prior.range[1])))
+  
+  corr.bm <- corr.from.Q.alltogether(
+    Q = Q, 
+    id.node = id.node, 
+    in.id.node = in.id.node)
+  
+  corr <- c()
+  for (i in seq_along(corr.bm)) {
+    corr[i] <- corr.bm[[i]]/corr.nb[[i]]
+  }
+  
+  A <- diag(aimed.ratio, nrow = length(aimed.ratio))
+  B <- diag(corr, nrow = length(corr))
+  M <- A-B
+  mini <- norm(M, "F")
+  
+  return(mini)
+}
+
+## with corr nb = 1
+aim = 0.5
+par = rep(0.5, length(aim))
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = 1,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+```
+
+$par: [1] 1
+$value: [1] 0.2137368
+$counts: function gradient 
+       3        3 
+$convergence: [1] 0
+$message: [1] "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+
+```{r}
+optim(par = par, find.aimed.ratios_, 
+      aimed.ratio = aim, corr.nb = corr.nb,
+      method="L-BFGS-B",
+      lower = 0.01, 
+      upper = 1)
+```
+
+$par: [1] 0.4765782
+$value: [1] 1.397526e-06
+
+
+### Barrier model considering the prev. results
+
+Comparison barrier model and stationary model, using the range fraction obtained from `optim` for the barrier model.
+
+**range for the normal area = 1**
+
+```{r}
+r_nbT <- 1
+r_bT <- c(0.5) 
+df.T <- trans.generate.q2(mesh = mesh, fem = fem, 
+                        loc.data = loc.data, 
+                        set.inla.seed = 2303, 
+                        barrier.triangles = barrier.triangles, 
+                        prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                        range.fraction = c(r_bT[1]), 
+                        range = r_nbT,
+                        sigma.u = 1, sigma.epsilon = 0.2,
+                        return.list = TRUE)
+
+
+df <- df.T$list.field$df
+A.data <- df.T$list.field$A.data
+
+
+#### Stationary model
+prior.range.st = c(1, 0.5)
+prior.sigma.st = c(1, 0.1)
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+ 
+model.stat <- inla.spde2.pcmatern(mesh, 
+                                  prior.range = 
+                                    c(prior.range.st[1],
+                                      prior.range.st[2]),
+                                  prior.sigma = 
+                                    c(prior.sigma.st[1],
+                                      prior.sigma.st[2]))
+  
+formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+#### Transparent Barrier model with reference correlation not 1
+## range fraction optim line 507
+x <- 0.4792988
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x[1]))
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+res.stationary$summary.hyperpar
+exp(res.barrier$summary.hyperpar) 
+```
+
+**range for the normal area = 2**
+
+```{r}
+r_nbT <- 2
+r_bT <- c(0.5) 
+df.T <- trans.generate.q2(mesh = mesh, fem = fem, 
+                        loc.data = loc.data, 
+                        set.inla.seed = 2303, 
+                        barrier.triangles = barrier.triangles, 
+                        prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                        range.fraction = c(r_bT[1]), 
+                        range = r_nbT,
+                        sigma.u = 1, sigma.epsilon = 0.2,
+                        return.list = TRUE)
+
+
+df <- df.T$list.field$df
+A.data <- df.T$list.field$A.data
+
+
+#### Stationary model
+prior.range.st = c(1, 0.5)
+prior.sigma.st = c(1, 0.1)
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+ 
+model.stat <- inla.spde2.pcmatern(mesh, 
+                                  prior.range = 
+                                    c(prior.range.st[1],
+                                      prior.range.st[2]),
+                                  prior.sigma = 
+                                    c(prior.sigma.st[1],
+                                      prior.sigma.st[2]))
+  
+formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+#### Transparent Barrier model with reference correlation not 1
+## range fraction optim line 507
+x <- 0.4792988
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x[1]))
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+res.stationary$summary.hyperpar
+exp(res.barrier$summary.hyperpar) 
+```
+
+**range for the normal area = 4**
+
+```{r}
+#### Simulate response variable for loc.data
+r_nbT <- 4
+r_bT <- c(0.5)
+df.T <- trans.generate.q2(mesh = mesh, fem = fem, 
+                        loc.data = loc.data, 
+                        set.inla.seed = 2303, 
+                        barrier.triangles = barrier.triangles, 
+                        prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                        range.fraction = c(r_bT[1]), 
+                        range = r_nbT,
+                        sigma.u = 1, sigma.epsilon = 0.2,
+                        return.list = TRUE)
+
+
+df <- df.T$list.field$df
+A.data <- df.T$list.field$A.data
+
+#### Stationary model
+prior.range.st = c(1, 0.5)
+prior.sigma.st = c(1, 0.1)
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+ 
+model.stat <- inla.spde2.pcmatern(mesh, 
+                                  prior.range = 
+                                    c(prior.range.st[1],
+                                      prior.range.st[2]),
+                                  prior.sigma = 
+                                    c(prior.sigma.st[1],
+                                      prior.sigma.st[2]))
+  
+formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+#### Transparent Barrier model with reference correlation not 1
+## range fraction optim line 507
+
+x <- 0.4792988
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x[1]))
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+
+res.stationary$summary.hyperpar
+exp(res.barrier$summary.hyperpar) 
+```
+
+**range for the normal area = 5**
+
+```{r}
+r_nbT <- 5
+r_bT <- c(0.5) 
+df.T <- trans.generate.q2(mesh = mesh, fem = fem, 
+                        loc.data = loc.data, 
+                        set.inla.seed = 2303, 
+                        barrier.triangles = barrier.triangles, 
+                        prior.range = c(1, 0.5), prior.sigma = c(1, 0.1),
+                        range.fraction = c(r_bT[1]), 
+                        range = r_nbT,
+                        sigma.u = 1, sigma.epsilon = 0.2,
+                        return.list = TRUE)
+
+
+df <- df.T$list.field$df
+A.data <- df.T$list.field$A.data
+
+
+#### Stationary model
+prior.range.st = c(1, 0.5)
+prior.sigma.st = c(1, 0.1)
+
+stk <- inla.stack(data=list(y=df$y), 
+                    A=list(A.data, 1),
+                    effects=list(s=1:mesh$n, 
+                                 intercept=rep(1, nrow(df))), 
+                    remove.unused = FALSE, 
+                    tag='est')
+ 
+model.stat <- inla.spde2.pcmatern(mesh, 
+                                  prior.range = 
+                                    c(prior.range.st[1],
+                                      prior.range.st[2]),
+                                  prior.sigma = 
+                                    c(prior.sigma.st[1],
+                                      prior.sigma.st[2]))
+  
+formula.st <- y ~ 0 + intercept + f(s, model=model.stat)
+  
+res.stationary <- inla(formula.st, data=inla.stack.data(stk),
+            control.predictor=list(A = inla.stack.A(stk)),
+            family = 'gaussian',
+            control.family = list(hyper = list(prec = list(
+              prior = "pc.prec", fixed = FALSE, 
+              param = c(0.2,0.5)))),
+            control.mode=list(restart=T, theta=c(4,-1.7,0.25)))
+  
+#### Transparent Barrier model with reference correlation not 1
+## range fraction optim line 507
+x <- 0.4792988
+barrier.model <- inla.barrier.pcmatern.plus(mesh, 
+                             fem, 
+                             barrier.triangles, 
+                             prior.range = c(1, 0.5),
+                             prior.sigma = c(1, 0.1),
+                             range.fraction = c(x[1]))
+
+formula <- y ~ 0 + intercept + f(s, model = barrier.model)
+
+res.barrier <- inla(formula, 
+                    data = inla.stack.data(stk),
+                    control.predictor = 
+                      list(A = inla.stack.A(stk)),
+                    family = 'gaussian',
+                    control.family = 
+                      list(hyper = list(
+                          prec = list(prior = "pc.prec", 
+                                      fixed = FALSE, 
+                                      param = c(0.2,0.5)))),
+                    control.mode=list(restart=T, 
+                                      theta=c(3.2, 0.4, 1.6)))
+  
+res.stationary$summary.hyperpar
+exp(res.barrier$summary.hyperpar) 
+```
+
+## Discussion
+In this example I am checking the results gotten from different pair of points around the barrier.
+
+However, if I actually wanted to consider more than one pair of points I would have to add a line to the `optim` function such that I find the common r (since it is only one barrier) that minimizes the function for these several pairs. It can't be done with `find.aimed.ratios_` because it assumes there's one $r_b$ for each pair, i.e.  `fem$hdim`-1 has to be equal to the number of different $r_b$. 
+
+Taking more pair of points might make sense in very difficult geometries, where taking a pair of points from one side might actually give different results than taking them on another side. I would evaluate the results taking just one pair at different sides of the barrier and check if it varies too much before trying anything more complex. Code wise it is easy to do, it is just a matter of whether we want to add this option on our implementation or not.
+
+Additionally, using $corr_{nb}$ is much more relevant in this example.
+
+Results from the models obviously depend on the simulated variable response (there's an `rnorm`). In these examples the number of obs is low ($n=20$)
+
+
+
+
+
+
+
+

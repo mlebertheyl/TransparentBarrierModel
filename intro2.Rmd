@@ -1,0 +1,570 @@
+
+Discussion
+
+Please consider the following general structure. For the citations please use the bib file "Library.bib" and focus on what the asbtract say.
+
+Part 1: 
+- start with a catchy phrase about the importance of modeling the scenarios realistically. 
+- mention what's been done before my research
+- mention the limitations of what's been done
+- introduce the transparent barrier model
+- how the transparent barrier model overcomes the limitations previously mentioned
+
+Part 2:
+- the importance of the findings from the "simulation study", Section 4 of the file "draft10"
+- the advantages of the Transparent barrier model.
+- why using the transparent model makes sense
+- The implementation being fast and available in INLA
+
+Part 3:
+- the importance of the findings from the the "Application to Dugong species distribution in the
+Red Sea" Section 5 in the file "draft10"
+- how it makes sense according to the literature on dugongs (please add citations)
+ 
+Part 4:
+- the importance of my model for marine evironments in general.
+- mention there's lots of studies of the importance of barriers in fisheries. 
+- briefly explain these studies with citations. 
+- why is it particularly relevant for marine megafauna with citations.
+
+Part 5:
+- limitations of my research
+- limiations of the model in general
+
+Part 6:
+- future work
+
+
+1. what was being use, limitations of tghis whatever, we introdcue...that overcomes these whatever by...
+
+
+
+2. simulated data set and what it means for stat
+
+3. about the duging data set with 2 or 3 examples
+
+4. limitations
+
+5 fiture 
+
+findings using 
+
+
+Discussion for Dugong
+
+adding variables to the model
+
+The barrier model in Haakon paper defines the range fraction as 0.2, we noticed 0.2 actually doesn't get rid of the correlation entirely
+
+Results of the application are a close up of the study area
+
+Note results for dugongs are a close up
+
+#Conclusions
+
+Add that this is a toy "unreal data" the bathym is at 20 meters, and that the model has to be done on a real data set for the red sea. Maybe sure it is very clear this is made up data.
+
+Given this is a toy example we are not concern with defining precise barrier to explain Dugong behavior so our definition of barriers even though based on scientific literature is somewhat arbitrary. We do not intend to explain Dugong actual estimation but only use it as an example to justify out model. However, defining more precise barriers would definitely give precise results on their distribution, it is just not our goal to do it here.
+Barrier do not need to be based on bathymetry.
+We this model we could also asses connectivity between two areas separated by a transparent barrier.
+
+Adjusting transparency may lead to stationary or classic barrie rmodel so we can use this one for everything
+
+Together, these results demonstrate the Transparent Barrier model’s capacity to represent spatial correlation that respects the ecological and physical constraints of marine systems. By modulating permeability through range fractions, the model produces prior correlation surfaces that align with expert knowledge and biological intuition. As in the simulation study (Figure 2), the spatial dependence patterns are not only visually intuitive but also adaptable across multiple scenarios, enhancing the model’s realism and interpretability.
+
+This type of correlation visualization can be particularly useful in applied contexts, where researchers and conservation practitioners must assess whether the model behavior aligns with known habitat use and movement ecology. By clearly showing how spatial dependence responds to the presence and permeability of barriers, the Transparent Barrier model offers a transparent and interpretable foundation for building spatial models in data-limited but ecologically complex settings such as the Red Sea. This allows domain experts to engage more confidently with the model structure and assumptions, facilitating its application in conservation-oriented spatial modeling.
+
+#####add
+It's important to note that the bathymetry's low resolution and the use of a simplified, artificial dataset—based on local ecological knowledge approximating potential dugong sightings—mean that the results presented here are illustrative rather than reflective of actual dugong behavior. This toy dataset emulates the type of incidental sightings data that might be collected in real-world scenarios.
+
+Despite these limitations, this example effectively showcases the Transparent Barrier model's potential to incorporate physical barriers and spatial discontinuities into species distribution modeling. With higher-resolution maps and real observational data, this approach could significantly enhance our understanding and conservation of dugongs and other marine megafauna in the Red Sea and similar environments.
+
+######
+
+Together, these results demonstrate the Transparent Barrier model’s capacity to represent spatial correlation according to ecological and physical constraints of marine systems. By modulating permeability through range fractions, the model produces prior correlation surfaces that align with expert knowledge and biological intuition. As in the simulation study (Figure 2), the spatial dependence patterns are not only visually intuitive but also adaptable across multiple scenarios, enhancing the model’s realism and interpretability.
+
+#Supp
+
+This a copy of the dolphin article
+Bayesian posterior distributions, unlike the mean and confidence intervals produced by classical analyses, enable simple probability statements about the unknown parameters. Thus, the region bounded by the 0.025 and 0.975 quantiles of the posterior distribution has an intuitive interpretation: for a specific model, the unknown parameter has a 95% chance of falling within this range of values.
+
+# Discussion
+
+
+
+A central aspect of the Transparent Barrier model is the ability to systematically adjust the permeability of barriers by modifying the local spatial range parameter in each region. In practical terms, this is achieved by expressing the range within a barrier as a fraction of the range in the normal (non-barrier) area, with lower fractions representing less permeable barriers. While the ecological motivation is clear, translating it to parametrization for the range fraction is not straightforward.
+
+What we do know is for any distance between two points, we have a corresponding correlation value, so we can fit a smoothing spline to empirical data of distance versus correlation, assuming the range for the normal area is the prior range. We can also fit a scaled smoothing spline assuming the range is the prior range for the normal area multiplied by the range fraction. The effect of adjusting the local range can be quantified by examining the relative change in the spatial field's derivative at a specific correlation value (e.g., 0.13) between the original and scaled models. The ratio of the derivatives at this correlation quantifies how much more rapidly the spatial effect decays under the chosen range fraction. In practice, if we assume the range for the normal area is for example 21, and use a range fraction of 0.2, we are specifying that the new correlation curve should reach 0.13 at 4.2 units. Achieving this requires scaling the derivative so it decays 6 times faster approximately. Conversely, if we want the correlation to decay 6 times faster in a barrier, we should use a range fraction of 0.2.
+
+Thinking about  the distance at which correlation is 0.13 or deciding how fast the correlation curve decays may not always be intuitive. 
+However, the same idea can be generalized to choose distance fractions at any correlation value. We refer to these as distance fractions and not range fraction, since the range is defined as the distance where correlation is 0.13. The process is straightforward: first, choose a correlation value and set the desired distance fraction at that value; second, find the scaling factor for the derivative so that the ratio between the distances given by the scaled and original spline models matches the desired distance fraction. The final step is to determine the corresponding range fraction at correlation 0.13 to use in the Transparent Barrier model. The correlation value to choose in the first step depends on the available knowledge of the study area. For example, we might expect the correlation between two points in the normal area that are 2 units apart to be ~0.9, but in the barrier area the same correlation occurs at 1 unit, we use a distance fraction of 0.5 at correlation 0.9, determine the scaling factor, and then compute the appropriate range fraction at 0.13 to use in the Transparent Barrier model. We call this distance fraction the "transparency" at the chosen correlation. 
+
+This approach ensures that the choice of transparency for barriers is grounded in measurable, interpretable changes in the spatial decay rate and can be adapted to specific ecological hypotheses. Moreover, the method can be applied at multiple reference locations, allowing for spatially varying permeability to be incorporated in a reproducible and coherent manner. For the dugong applied case table x in the appendix shows some examples of transparencies for different correlation values, the corresponding scaling factor, and resulting range fraction for the barrier in the Transparent Barrier model. 
+
+
+
+#####add
+add that table in the appendix shows results obtained with different priors to assess sensitivity of the model to prior choice
+
+It's important to note that the bathymetry's low resolution and the use of a simplified, artificial dataset—based on local ecological knowledge approximating potential dugong sightings—mean that the results presented here are illustrative rather than reflective of actual dugong behavior. This toy dataset emulates the type of incidental sightings data that might be collected in real-world scenarios.
+
+Despite these limitations, this example effectively showcases the Transparent Barrier model's potential to incorporate physical barriers and spatial discontinuities into species distribution modeling. With higher-resolution maps and real observational data, this approach could significantly enhance our understanding and conservation of dugongs and other marine megafauna in the Red Sea and similar environments.
+
+###################################################
+
+
+
+4.2 Transparency Definition in Simulation Study: Step-by-Step Guide
+
+Concepts: 
+  the range is the distance in number of units, at which correlation is 0.13. 
+  the range is usually denoted by $r$, however we will use $r_n$ to distinguish it the range in the normal area from the range $r_b$ inside the barrier area.
+  $r_b$ is a fixed fraction of $r_n$
+  \citep{Bakka} defines $r_b$ as $r_b=r_n/h$ where $h$ is a large number to reduce correlation across barriers in the (original) barrier model.
+  we change the notation to define the range fraction ($rf$) as the number of units  at which correlation is 0.13 inside the barrier $r_b$ over the number of units at which correlation is 0.13 outside the barrier $r_n$.
+    $$rf = \frac{r_b}{r_n}
+    $$
+  remember that range is just a distance measure, the distance at which correlation is 0.13, i.e. correlation is empirically non existent.
+
+A. Step-by-step Written Procedure   
+  
+  1. Decide on a Reference Correlation Value:
+
+##############################
+
+While permeability is explicitly defined in the model by the range fraction of a barrier $p_b$, transparency $t_{c_0}$ is a way of considering previous knowlededge we have about the study area and use it to find the range fraction.
+
+the previous knowledge we have of the research area
+
+Adjusting barrier permeability is explicitly considered in the Transparent Barrier model by modifying the local spatial range parameter within a barrier and expressing it as a fraction of the range in the normal (non-barrier) area
+
+
+where lower fractions represent less permeable barriers. While the ecological motivation is clear, translating this into a parametrization for the range fraction requires some consideration.
+
+  Let $d_n$ be the distance in number of units at which correlation is $c_0$ in the normal area, and $d_b$ be the distance in number of units at which correlation equal $c_0$ inside (any) barrier.
+  
+  We then define transparency as:
+
+$$t_{c_0} = \frac{d_b}{d_n}|_{c_0}$$
+where $t_{c_0}$ is the \textb{transparency} evaluated at the chosen reference correlation $c_0$. In other words $t_{c_0}$ is a fixed fraction of the distance at which correlation is $c_0$.
+
+  For the specific case where $c_0 \sim 0.13$, the comparison between the distance at which correlation is $0.13$ inside and outside is nothing more than what we already know to be the range fraction, then $t_{c_0}=p_b = r_b/r_n$ ($t_{c_0=0.13} = p_b$ in Table \ref{tab1}). 
+  
+  To find $t_{c_0}$ we: (1) fit a spline $f(d)$ for the curve distance over correlation obtained with the Transparent Barrier model assuming the range to be the prior range for the normal area in the entire study region. (2) fit a scaled version of the spline $f_{scaled}(d)=f(d/s)$ with scaling factor $s$. And (3) find $s$ so that:
+  
+  $$f_{scaled}(d_b) = c_0 \text { and } t_{c_0} = \frac{d_b}{d_n}|_{c_0}$$
+ Then $p_b = r_b/r_n$, with $r_n$ the prior range of the normal area and  $r_b$ the distance at which correlation is 0.13 on the scaled function.
+ 
+  Table \ref{tab1} shows some examples of $t_{c_0}$ with $c_0$ equal to 0.13, 0.5, and 0.8.
+  
+  
+
+ ###########################
+# APENDIX A
+
+---
+
+## **Step-by-Step Mathematical Procedure for Building a Smoothing Spline**
+
+---
+
+### **1. State the Problem**
+
+Given $n$ data points $(x_1, y_1), (x_2, y_2), \ldots, (x_n, y_n)$,
+find a smooth function $f(x)$ that balances:
+
+* closeness to the data: $f(x_i) \approx y_i$
+* smoothness: $f(x)$ is not too "wiggly".
+
+---
+
+### **2. Define the Smoothing Spline Objective**
+
+The smoothing spline $f(x)$ minimizes the penalized least squares criterion:
+
+$$
+J(f) = \sum_{i=1}^{n} \left[ y_i - f(x_i) \right]^2 + \lambda \int_{x_1}^{x_n} \left[ f''(x) \right]^2 \, dx
+$$
+
+where:
+
+* the first term ensures $f(x)$ fits the data,
+* the second term penalizes the roughness (as measured by the second derivative),
+* $\lambda \geq 0$ is the smoothing parameter:
+
+  * $\lambda = 0$: interpolating spline (passes through all points),
+  * $\lambda \to \infty$: nearly linear (very smooth).
+
+---
+
+### **3. Spline Representation**
+
+The solution $f(x)$ is a **natural cubic spline** with knots at all $x_i$:
+
+$$
+f(x) =
+\begin{cases}
+S_1(x), & x_1 \leq x < x_2 \\
+S_2(x), & x_2 \leq x < x_3 \\
+\quad \vdots & \\
+S_{n-1}(x), & x_{n-1} \leq x \leq x_n
+\end{cases}
+$$
+
+where each piece $S_j(x)$ is a cubic polynomial:
+
+$$
+S_j(x) = a_j + b_j (x - x_j) + c_j (x - x_j)^2 + d_j (x - x_j)^3
+$$
+
+
+for $j = 1, \ldots, n-1$.
+
+---
+
+### **4. Constraints and Conditions**
+
+The spline coefficients are determined by imposing the following conditions:
+
+#### **a) Interpolation (or Approximate Fit):**
+
+$$
+f(x_i) = y_i \quad \text{for} \quad i = 1, \ldots, n
+$$
+
+#### **b) Continuity of 1st and 2nd Derivatives at Knots:**
+
+For $j = 2, \ldots, n-1$:
+
+$$
+S_{j-1}(x_j) = S_{j}(x_j)
+$$
+
+$$
+S'_{j-1}(x_j) = S'_{j}(x_j)
+$$
+
+$$
+S''_{j-1}(x_j) = S''_{j}(x_j)
+$$
+
+#### **c) Natural Boundary Conditions:**
+
+$$
+f''(x_1) = 0, \qquad f''(x_n) = 0
+$$
+
+---
+
+### **5. Set Up the Linear System**
+
+The above constraints yield a system of $4(n-1)$ equations for the $4(n-1)$ coefficients ($a_j, b_j, c_j, d_j$).
+The inclusion of the smoothing parameter $\lambda$ modifies the diagonal entries in the system and balances fit and smoothness.
+
+---
+
+### **6. Solve for the Coefficients**
+
+Write and solve the resulting linear system to obtain all the spline coefficients.
+
+
+---
+
+### **7. Evaluate the Spline and Its Derivatives**
+
+Once the coefficients are known, you can evaluate:
+
+$$
+f(x) \quad\text{for any}\quad x
+$$
+
+The derivative:
+
+$$
+f'(x) = b_j + 2c_j (x - x_j) + 3d_j (x - x_j)^2
+$$
+
+And the second derivative:
+
+$$
+f''(x) = 2c_j + 6d_j (x - x_j)
+$$
+
+for $x$ in the interval $[x_j, x_{j+1}]$.
+
+---
+
+While doing this by hand is feasible for a very small $n$, for realistic data sets, the linear system becomes quite large, and is best handled computationally. The procedure above, however, fully defines what `smooth.spline` does in R.
+
+---
+
+## Step-by-step R Code Procedure
+
+```{r}
+df <- df0.13
+```
+
+```{r}
+#df from prev function
+#s sacling factor
+#c0 reference correlation
+#t0 desired transparency at c0
+
+ratio_fun <- function(df, s, c0, t0) {
+  # Fit original spline
+  spline_fit <- smooth.spline(df$field, df$dist)
+  
+  # Fit spline with faster decay (scaled spline)
+  spline_fit_fast <- smooth.spline(df$field / s, df$dist)
+  
+  # Get predictions at c0
+  y_at_c0 <- predict(spline_fit, x = c0)$y
+  y_at_c0_fast <- predict(spline_fit_fast, x = c0)$y
+  
+  # Compute ratio
+  ratio <- y_at_c0_fast / y_at_c0
+  return(ratio - t0)
+}
+
+c0 <- 0.5
+t0 <- 0.2
+#Find s such that the ratio at c0 is t0
+result <- uniroot(function(s) ratio_fun(df, s, c0, t0), interval = c(1.01, 20))
+s_solution <- result$root
+cat("Scaling factor s needed:", s_solution, "\n")
+#Scaling factor s needed: 1.865426 
+
+#Fit scaled spline and check the result
+spline_fit <- smooth.spline(df$field, df$dist)
+spline_fit_scaled <- smooth.spline(df$field / s_solution, df$dist)
+y_at_c0 <- predict(spline_fit, x = c0)$y
+y_at_c0_fast <- predict(spline_fit_scaled, x = c0)$y
+check_s <- y_at_c0_fast / y_at_c0
+cat("Final ratio (should be", t0, "):", check_s, "\n")
+
+#Find predictions at x = 0.13
+c0.13 <- 0.13
+y_at_0.13 <- predict(spline_fit, x = c0.13)$y
+y_at_0.13_scaled <- predict(spline_fit_scaled, x = c0.13)$y
+
+#Compute the ratio
+rb_empirical <- y_at_0.13_scaled / y_at_0.13
+cat("Achieved ratio at x = 0.13 for s =", s_solution, "is", rb_empirical, "\n")
+
+cat("Range fraction at t0 =", t0, "and c0 =", c0, "is",  rb_empirical, "\n")
+```
+
+
+
+Let me know if you want a worked numerical example with actual numbers!
+
+Code appendix
+ 
+
+
+ evaluating $$\frac{d_b}{d_n}|_{c_0=0.13}$$ using $f(d)$ and f
+ 
+ 6. Calculate the range fraction ($rf$):
+  
+  The scaling factor $s$ indicates the overall scaling of the spline we shall use to get the desired transparency $t_{c_0}$ at a given correlation $c_0$. 
+  Scaling the spline and getting the distance at which correlation is 0.13 from the curve will give us $r_b$ if the normal range $r_n$ was the prior used for this parameter.
+  
+  
+  
+###################  
+*In practice add:* 
+  Choose a correlation value $c_0$ that is meaningful for your study (e.g., 0.13, 0.5, 0.8). 
+  This is the point on the correlation curve where you will compare distances inside and outside the barriers.
+  
+Choose a correlation value $c_0$ that is meaningful for your study (e.g., 0.13, 0.5, 0.8). The correlation value that is meaningful for the study depends on the study
+
+ In practice we need to find the distance at which the chosen correlation value $c_0$ (e.g., 0.13, 0.5, 0.8) occurs in the normal area. To do so we fit a smoothing spline function $f(d)$ for distance over correlation in the normal area. 
+  
+  3. Decide Transparency ($t_{c_0}$) of the barrier
+  
+  Decide how much shorter you want the distance at this correlation value to be inside the barrier compared to the normal area.
+  
+
+  
+  4. Fit Smoothing Splines to Correlation Curves:
+  
+  Fit a smoothing spline to your empirical correlation vs. distance data for the normal area using the prior specification for the normal range as the model $r_n$. 
+  Then, fit another smoothing spline to the same data, but scale the distance by a factor $s$ to represent the barrier effect.
+  
+  5. Find the Scaling Factor $s$
+
+  Adjust $s$ until the distance at which the chosen correlation value $c_0$ is reached inside the barrier matches the desired transparency $t_{c_0}$.
+
+  6. Calculate the range fraction ($rf$):
+  
+  The scaling factor $s$ indicates the overall scaling of the spline we shall use to get the desired transparency $t_{c_0}$ at a given correlation $c_0$. 
+  Scaling the spline and getting the distance at which correlation is 0.13 from the curve will give us $r_b$ if the normal range $r_n$ was the prior used for this parameter.
+  
+  Interpretation:
+  The scaling factor $s$ is actually how faster the decay of the distance over field curve would be in a scenario where the range for the entire area was $r_b$.
+  Transparency $t_{c_0}$ at lower values of $c_0$ results in much faster decays than higher values of $c_0$ \ref{tab1}.    
+  
+  Results for $c_0 = 0.5$ have the following empirical interpretation.  
+  $1-t_{c_0} = \frac{d_n-d_b}{d_n} |_{c_0}$ so $1-t_{c_0}$ represents the distance change measured as a fraction of the normal distance $d_n|_{c_0}$. 
+  Then only for $c_0 \sim 0.5$ where there's an almost one to one correspondence between distance and correlation, the following can be interpreted:
+  If I want the change to be $1-t_{c_0}$ I need to scale the spline so it decays $1+(1-t_{c_0})$ times faster.
+  Then at $c_0 = 0.5$ we have $1-t_{c_0} \sim s-1$ (or $2-t_{c_0} \sim s$). 
+  For example choosing $t_{0.5} = 0.2$ (see \ref{tab1}) would mean I want the distance to change in $0.8 \times d_n$ number of units. To make this happen I would need the global decay of the distance over correlation to be $ \sim 1 +0.8$ times faster or taking the interpretation even further, I could say the decay is $80 \%$ faster in the barrier area than in the normal area. Conversely, if we want the decay to be $80 \%$ faster we can choose $t_{0.5} = 0.2$ and work our way to $r_b$ from there.
+  
+  It might be sensible then to work with $t_{0.5}$ if we don't have much information on how the distance drops inside the barrier area when I evaluate the same correlation value $c_0$ inside and outside the barrier.
+
+Discussion?
+
+  Other interpretations are possible for different $c_0$, for example we might have some knowledge on the changes imposed by the barrier very close to the edge of this barrier but not much idea about what happens far from the edge. If this is the case choosing higher values of $c_0$ would make the most sense since higher correlation happens at shorter distances, and we have knowledge of the change at a very short distance (i.e. the edge of between the normal and barrier area). On the contrary we could have some information about the distance at which correlation disappears in which case we would choose to work with lower values of $c_0$.
+  
+  To build the curve and hence the spline for the normal area we do:
+  1. choose a point in the map to use as a reference, we will calculate the correlation between this point and all other points (as we do on \fig{}). As the splines will be build assuimg the range is the same for the entire area where to choose the point in the map is not that relevant as long as it not close to the boundaries of the map. Different can be tried out if needed.
+  2. After choosing the point we transform the map into a two dimensional dataset by getting correlation value at the absolute distance between the reference point and any other point. 
+  3. We build the spline.
+  
+  , this 
+  
+  
+  Tables are not all the same and we get them
+  
+  
+  but not what happens at larger 
+  
+  
+  However, 
+  
+  much information 
+  
+  on distance drop 
+  
+  
+  
+  $s-1$ on the other si
+  Then to get a change of $1-t_{c_0}$ I would have to scale the spline so it decays $1+(1-t_{c_0})$ times faster
+  
+  This is only true at $c_0 \sim 0.5$ where there's an almost one to one correspondence between distance and correlation.
+  
+  So I might say I want a change of 
+  
+  the fraction of the distance that is changing 
+  
+  of normal distance at which the correlation is $c_0$ and the barrier distance at which correlation is $c_0$ and the distance at w
+  
+  
+  the normal 
+  
+  where $t_{c_0}$ is the **transparency** evaluated at the chosen reference correlation $c_0$, $d_b$ is the distance (in number of units) at which correlation is $c_0$ inside the barrier and $d_n$ the distance (in number of units) at which correlation is $c_0$ in the normal area. Transparency is then a fixed fraction of the distance at which correlation is $c_0$.
+
+  
+  seems sensible if we do not have a lot 
+  Choosing lower values $c_0$
+  
+  After choosing the transparency $t_{c_0}$ and finding the scale factor $s$ for the spline 
+  The resulting distance fraction at the reference correlation defines your “transparency” (range fraction) for the barrier. Use this value as the range fraction parameter in your Transparent Barrier model.
+(Optional) Repeat for Other Correlation Values:
+If needed, repeat the procedure for different reference correlation values to understand transparency at different points on the curve.
+
+
+
+####################################################
+2. Determine Distance in the Normal Area:
+  
+  Find the distance at which the chosen correlation value $c_0$ (e.g., 0.13, 0.5, 0.8) occurs in the normal area. This is your reference distance $d_n$ ($d_n = r_n$ when $c_0 \sim 0.13$) for comparison.
+  
+  3. Decide Transparency ($t_{c_0}$) of the barrier
+  
+  Decide how much shorter you want the distance at this correlation value to be inside the barrier compared to the normal area.
+  
+*In practice add:* 
+  4. Fit Smoothing Splines to Correlation Curves:
+  
+  Fit a smoothing spline to your empirical correlation vs. distance data for the normal area using the prior specification for the normal range as the model $r_n$. 
+  Then, fit another smoothing spline to the same data, but scale the distance by a factor $s$ to represent the barrier effect.
+  
+  5. Find the Scaling Factor $s$
+
+  Adjust $s$ until the distance at which the chosen correlation value $c_0$ is reached inside the barrier matches the desired transparency $t_{c_0}$.
+
+  6. Calculate the range fraction ($rf$):
+  
+  The scaling factor $s$ indicates the overall scaling of the spline we shall use to get the desired transparency $t_{c_0}$ at a given correlation $c_0$. 
+  Scaling the spline and getting the distance at which correlation is 0.13 from the curve will give us $r_b$ if the normal range $r_n$ was the prior used for this parameter.
+  
+Discussion 
+
+The Transparent Barrier model follows the concept of the Barrier model, initially proposed by \citet{bakka_non-stationary_2019} for non-stationary Gaussian fields in the presence of physical barriers. First, a stochastic partial differential equation (SPDE) is formulated to describe a spatial Gaussian field with Matérn correlation. Second, the Matérn field covariance construction relies on a collection of all paths between points rather than solely the Euclidean distance.
+
+The critical difference between the Barrier model and the Transparent Barrier model is that the Barrier model eliminates paths crossing barriers entirely, whereas our proposed model weakens these paths based on barrier permeability.
+
+choosing $c_0=0.5$ might be sensible if we do not have any information on how to choose transparency
+
+######################################################
+
+  Ex discussion
+  
+A central aspect of the Transparent Barrier model is its capability to systematically adjust barrier permeability by modifying the local spatial range parameter in each region. Practically, this is implemented by expressing the range within a barrier as a fraction of the range in the normal (non-barrier) area, where lower fractions represent less permeable barriers. While the ecological motivation is clear, translating this into a parametrization for the range fraction requires some consideration.
+
+Specifically, for any given distance between two points, there is a corresponding correlation value. Consequently, we can fit a smoothing spline to empirical data of distance versus correlation, assuming the range for the normal area is the prior range. Similarly, a scaled smoothing spline can be fitted, assuming the range is the prior range for the normal area multiplied by the range fraction. Adjusting the local range can be quantified by examining the relative change in the spatial field's derivative at a specific correlation value (e.g., 0.13) between the original and scaled models. The ratio of these derivatives quantifies how much more rapidly the spatial effect decays under the chosen range fraction. For example, if we assume the normal area's range is 21 units and apply a range fraction of 0.2, the new correlation curve reaches 0.13 at 4.2 units, indicating that the derivative must decay approximately six times faster. Conversely, to achieve a sixfold faster correlation decay within a barrier, a range fraction of 0.2 is appropriate.
+
+Considering the distance at which the correlation reaches 0.13, or deciding on how rapidly the correlation curve decays, may not always be intuitive. However, this concept can be generalized by selecting distance fractions at any correlation value. We refer to these as distance fractions rather than range fractions, since the range specifically denotes the distance at which the correlation equals 0.13. The process is straightforward: first, choose a correlation value and set the desired distance fraction at that value; second, determine the scaling factor for the derivative such that the ratio between distances given by the scaled and original spline models matches the desired distance fraction. Lastly, calculate the corresponding range fraction at a correlation of 0.13 for use in the Transparent Barrier model. The choice of correlation value in the initial step depends on available knowledge of the study area. For example, if the expected correlation between two points 2 units apart in the normal area is approximately 0.9, and within the barrier area, the same correlation occurs at 1 unit, a distance fraction of 0.5 at correlation 0.9 is used. The scaling factor can then be determined, and the appropriate range fraction at 0.13 calculated for the Transparent Barrier model. This distance fraction is termed the "transparency" at the chosen correlation.
+
+This approach ensures the choice of transparency for barriers is grounded in measurable, interpretable changes in the spatial decay rate, adaptable to specific ecological hypotheses. Moreover, the method can be applied at multiple reference locations, enabling the incorporation of spatially varying permeability in a reproducible and coherent manner. Table \ref{tab1} in Appendix A shows transparencies for different correlation values, their corresponding scaling factors, and resulting range fractions for the barriers in the Transparent Barrier model.
+
+It is important to acknowledge the limitations inherent in this study. The coarse resolution of the bathymetry data and the use of a simplified, artificial dataset—derived from local ecological knowledge approximating potential Dugong sightings—mean the presented results are illustrative rather than definitive descriptions of actual Dugong behavior. This toy dataset emulates the incidental sightings data typically collected in real-world scenarios.
+
+Despite these limitations, our example effectively demonstrates the Transparent Barrier model's potential to integrate physical barriers and spatial discontinuities into species distribution modeling. With higher-resolution maps and real observational data, this approach could significantly enhance our understanding and conservation strategies for Dugongs and other marine megafauna in the Red Sea and comparable marine environments.
+
+
+#Alternative Tables
+
+\newpage
+\section{Plot alternatives}\label{secA2}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{overleaf/mesh.png}
+\caption{Coarse mesh example with barriers in red. On the left the outer polygon shows the extended mesh, and on the right the region is zoomed in so it only shows the area of interest.
+Row one shows the configuration with two barriers and a canal, and row two the configuration with one barrier dividing the study area.}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/mesh.classic.frame.png}
+\caption{}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/mesh.classic.png}
+\caption{}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/mesh.void.png}
+\caption{}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/corr2points.png}
+\caption{Correlation plots illustrating spatial dependence for two barrier configurations. The first configuration (left side) represents a study area divided by a barrier containing a canal in the middle, connecting the upper and lower sections of the normal area. The second configuration (right side) depicts a study area completely divided by a thin barrier. Rows correspond to different barrier permeability levels, expressed by range fractions: 0.01 (row 1), 0.2 (row 2), 0.3 (row 3), 0.5 (row 4), 0.7 (row 5), 0.8 (row 6), and 1 (row 7). Columns correspond to distinct reference points from which spatial correlation is measured across the study areas.}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/geom1u.sd.r0.8.png}
+\caption{Posterior results for the configuration with a canal connecting the upper and lower sections of the domain. Each row corresponds to a different range fraction (0.01, 0.8, and 1) used in the simulation for the barrier on the right, while the left barrier remains impermeable. From left to right, the columns show: (1) the posterior mean of the spatial field, (2) the posterior standard deviation, and (3) the posterior distribution of the spatial range in the normal area. For each setting, the Transparent Barrier model is displayed in large plots on the left, followed by smaller plots for the Barrier model (top) and stationary model (bottom).}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/geom1u.sd.r0.8.frame.png}
+\caption{}\label{}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{overleaf/geom1u.sd.r0.8.frame.side.png}
+\caption{}\label{}
+\end{figure}

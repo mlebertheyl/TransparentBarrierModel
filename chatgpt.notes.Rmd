@@ -1,0 +1,38 @@
+Notes from chat gpt that I might want to use later
+
+**Abstract**
+
+Spatial Gaussian fields (SGFs) are essential tools in spatial and spatio-temporal modeling, with the Matérn model frequently applied due to its flexibility and computational advantages. However, standard SGFs assume stationarity and isotropy, conditions that become unrealistic in environments with physical barriers. The Barrier model addresses this limitation but assumes that barriers are fully impermeable, a significant restriction in real-world applications. To resolve this, we propose the Transparent Barrier model, an innovative approach incorporating barriers with varying permeability, thus providing greater modeling flexibility and realism. We illustrate the utility of this model with marine megafauna distribution, specifically Dugongs (Dugong dugon), in the Red Sea, demonstrating its potential to accurately reflect complex spatial structures involving partially permeable barriers while maintaining computational efficiency.
+
+
+
+**Introduction**
+
+Spatial Gaussian fields (SGFs) are widely used in modeling spatial and spatio-temporal phenomena, particularly in applications where residual spatial structures arise due to unmeasured covariates, spatial aggregation, or spatial noise. Among these, the Matérn model is a prominent choice due to its flexibility and diverse applications. Advances such as the integrated nested Laplace approximation (INLA) (Rue et al., 2009) and stochastic partial differential equation (SPDE) approach (Lindgren et al., 2011) also support the use of the Matérn model by enabling efficient Bayesian inference and computational feasibility.
+
+One weakness of SGFs like the Matérn model is their reliance on assumptions of stationarity and isotropy, implying spatial autocorrelation modeled through the random effect remains unchanged when the map is rotated. However, these assumptions become unrealistic in the presence of physical barriers, boundaries, or irregular features, such as coastlines or islands, where spatial dependency should not be based solely on the shortest Euclidean distance. Such cases require models that account for the effects of physical barriers.
+
+The Barrier model was proposed to address this challenge by extending the Matérn framework to non-stationary settings. Instead of relying on the shortest Euclidean distance to determine spatial dependence, the Barrier model accounts for all potential connections between two locations. When physical barriers are present, the paths that cross over the barrier are removed, weakening the overall dependency between the two locations.
+
+While the original Barrier model is limited to physically impermeable barriers, many real-world scenarios involve barriers with varying permeability. To address this, the Transparent Barrier model has been developed, introducing a framework to account for barriers with partial permeability. For instance, islands may act as impermeable barriers for marine species, whereas sand patches with tidal water coverage may allow partial movement. The Transparent Barrier model extends the original by incorporating transparency as a parameter controlling permeability, enabling it to handle both fully impermeable and partially permeable barriers within the same model. The latter class of barriers will be called transparent barriers.
+
+This research introduces the Transparent Barrier model and demonstrates its application in real-world spatial settings. It retains the computational efficiency of stationary models while addressing the complexity of spatial structures influenced by barriers of varying nature, making it a practical and versatile tool for spatial modeling in marine science and beyond.
+
+
+
+
+
+**Motivation**
+
+Marine megafauna, such as whales, sharks, and large rays, play crucial roles in marine ecosystems, often regarded as keystone species due to their significant impact on the abundance and distribution of other organisms. Dugongs, for instance, help maintain seagrass ecosystems by grazing on seagrass beds, preventing overgrowth and promoting habitat complexity that supports diverse marine life. Therefore, conservation efforts focused on marine megafauna are essential for preserving marine ecosystem resilience.
+
+Species distribution models (SDMs) provide valuable insights into species distributions, habitat preferences, and ecological interactions. Common SDMs predict species occurrences using environmental variables like temperature and ocean currents, employing algorithms such as MaxEnt, Random Forest, and Generalized Additive Models (GAMs). However, their effectiveness relies heavily on comprehensive environmental data. When such data are lacking, incorporating spatial random effects to account for unexplained spatial dependencies becomes essential, capturing variations in species distribution beyond environmental factors.
+
+This study models Dugong distribution along the northern coast of the Saudi Arabian Red Sea, an area characterized by numerous islands and varying barrier permeability. Due to imprecise maps grouping islands rather than detailing their locations, available bathymetry data were used to construct accurate representations of islands rather than as direct covariates. This approach addresses limitations in traditional methods reliant on extensive environmental data, which were not applicable due to data constraints.
+
+The Dugong data used are incidental sightings, collected opportunistically from activities such as tourism and citizen science initiatives. A Poisson process framework is employed as a suitable modeling approach for these randomly occurring events. Bathymetry data were provided by the Red Sea Global (RSG) project. By developing a model that accounts for spatial random effects and varying permeability of physical barriers, this research aims to support the conservation of Dugongs and other marine megafauna in the Red Sea region, serving as a guide for similar studies requiring advanced spatial modeling approaches.
+
+
+The Transparent Barrier model employs the Finite Element Method (FEM) to solve the underlying SPDE, requiring a Delaunay triangulation mesh that discretizes the spatial domain into triangles (Bakka et al., 2019). This triangulation facilitates efficient computations by creating a sparse precision matrix and adequately captures the spatial correlation structure. In non-stationary spatial contexts involving physical barriers, the mesh explicitly represents islands and other barriers as internal boundaries, ensuring accurate modeling of varying barrier permeabilities. Proper boundary specification is critical, as it directly influences the representation of spatial dependencies and model accuracy. Mesh construction, including the adequate representation of boundaries, remains an essential user-assessed step; however, this assessment is similarly required when applying stationary spatial Gaussian fields (Bakka et al., 2019).
+
+The Transparent Barrier model employs the Finite Element Method (FEM) to solve the underlying SPDE, requiring a Delaunay triangulation mesh that discretizes the spatial domain into triangles (Bakka et al., 2019). This triangulation facilitates efficient computations by creating a sparse precision matrix and adequately captures the spatial correlation structure. 

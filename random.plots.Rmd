@@ -1,0 +1,290 @@
+```{r}
+gg_mesh.bars +
+  xlim(c(-951, -905)) +
+  ylim(c(2870,2905))
+
+```
+
+```{r}
+c0 <- image_read("dng_plots/dngcutmap2.png")
+
+c0 <- 
+  image_crop(c0, "1122x+300+550")
+c0 <- image_scale(c0, "x800")
+c1 <- image_read("dng_plots/mesh.png")
+
+img <- c(c0,c1)
+i <- image_append(img, stack = F)
+image_write(i, path = "dng_plots/dngmesh.png", format = "png")
+```
+
+
+```{r}
+c1 <- image_read("dng_plots/p1.png")
+c0 <- image_read("dng_plots/p0.png")
+c2 <- image_read("dng_plots/p2.png")
+c3 <- image_read("dng_plots/p3.png")
+c4 <- image_read("dng_plots/p4.png")
+
+img <- c(c0,c2,c3,c4)
+i <- 
+  image_append(img, stack = F)
+image_write(i, path = "dng_plots/corrst.png", format = "png")
+```
+
+```{r}
+prior.range <- c(21.0,  0.5)
+range.fraction <- c(0.01, 0.01)
+iv_ <- corr.covfx(range.fraction = range.fraction,
+                id.node = id.node,
+                prior.range = prior.range)
+field <- iv_$corr
+iv.df_ <- df4plot(field, 
+                dims = 300,
+                id.coord = id.coord)
+
+iv.plots_ <- corr.plots(field, df = iv.df_,
+                      xlim, ylim, zlim,
+                      points = NULL,
+                      filter = 0.2,
+                      show.plot.field = F)
+
+corr.plots(field, df = iv.df_, xlim, ylim, zlim, filter = -1)
+iv.plots_
+```
+
+```{r}
+corr.plots(iv$corr, df = iv.df, xlim, ylim, zlim, filter = -1)
+```
+
+```{r}
+gg_mesh.bars +
+  geom_sf(data = st_as_sf(location.sp), col = "red") +
+  xlim(c(-930, -900)) +
+  ylim(c(2870,2890))
+
+local.plot.field(iv_$corr, 
+                 mesh, 
+                 xlim = xlim, 
+                 ylim = ylim,
+                 zlim = zlim,
+                 axes =F)
+
+local.plot.field(v$corr, 
+                 mesh, 
+                 xlim = xlim, 
+                 ylim = ylim,
+                 zlim = zlim,
+                 axes =F)
+
+local.plot.field(iv$corr, 
+                 mesh, 
+                 xlim = xlim, 
+                 ylim = ylim,
+                 zlim = zlim,
+                 axes =F)
+```
+DATE plots February 6
+date
+from corr.curves3 in BasicFunctions
+figures proposal
+
+```{r}
+ex4 <- fx.pre.field(loc.data = TRUE,
+                               smalldist = 0.5,
+                               width = c(2,2)) 
+ex5 <- fx.pre.field(loc.data = TRUE,
+                               smalldist = 0,
+                               width = c(2,2)) 
+
+#range = 2
+set.inla.seed <- 2303
+pf <- ex4
+mesh <- pf$mesh 
+fem <- pf$mat 
+barrier.triangles <- list(pf$bar1, pf$bar2)
+#loc.data <- pf$loc.data
+poly.bar.orginal <- pf$poly.bar.orginal
+poly.water <- pf$poly.water
+
+zlim = c(0.1, 1)
+xlim = poly.water@bbox[1, ] 
+ylim = poly.water@bbox[2, ]
+
+proj = inla.mesh.projector(mesh, xlim = xlim, 
+                           ylim = ylim, dims=c(300, 300))
+```
+
+
+```{r}
+s1 <- ggplot(data = ex4$poly.water_sf) + 
+      inlabru::gg(ex4$mesh_h) + #plot mesh_hb alternatively
+      #geom_sf(data =pf$loc.data_sf,
+      #    col='purple',size=1,alpha=0.5) +
+  ggtitle("Simulation 1")
+
+s2 <-ggplot(data = ex5$poly.water_sf) + 
+      inlabru::gg(ex5$mesh_h) + #plot mesh_hb alternatively
+  ggtitle("Simulation 2")
+
+s3 <- ggplot(data = field.w.4_2.5s0.5$poly.water_sf) + 
+      inlabru::gg(field.w.4_2.5s0.5$mesh_h) + #plot mesh_hb alternatively
+  ggtitle("Simulation 3")
+
+s4 <- ggplot(data = field.w2.5.4$poly.water_sf) + 
+      inlabru::gg(field.w2.5.4$mesh_h) + #plot mesh_hb alternatively
+  ggtitle("Simulation 4")
+
+gridExtra::grid.arrange(s1, s2, ncol = 2, nrow =2)
+
+fpp <- file.path("plots", paste0("mesh_s.png"))
+png(fpp)
+gridExtra::grid.arrange(s1, s2, ncol = 2, nrow =2)
+dev.off()
+```
+
+DATE date
+Plots March 6
+
+```{r squares, echo=FALSE, out.width="100%", fig.cap= "Delaunay triangulation for the different geometries used"}
+r <- magick::image_read("plots.now/2b_mesh.png")
+r <- magick::image_crop(r, geometry = "480x240+000-000")
+r2 <- magick::image_read("plots.now/1b_mesh.png")
+r2 <- magick::image_crop(r2, geometry = "480x240+000-000")
+img <- c(r,r2)
+
+image_append(img, stack = TRUE)
+```
+
+```{r gifs2b, echo=FALSE, fig.cap="Two barrier scenario: row one shows the true simulated spatial field; and row two and three the spatial estimate for the transparent barrier model and the stationary model"}
+r <- magick::image_read("plots.now/2b.sim.png")
+image_append(image_scale(r, "x500"))
+```
+
+
+```{r dens2b, echo=FALSE, fig.cap="Two barrier scenario: density for the range hyperparameter. Results for the barrier model are shown in row one and the stationary model in row two. Columns show the different range fractions from 0.01 to 1 in ascending order"}
+r <- magick::image_read("plots.now/2br/0.01.png")
+#r <- magick::image_crop(r, geometry = "480x240+000-000")
+r2 <- magick::image_read("plots.now/2br/0.25.png")
+#r2 <- magick::image_crop(r2, geometry = "480x240+000-000")
+
+r3 <- magick::image_read("plots.now/2br/0.5.png")
+#r3 <- magick::image_crop(r3, geometry = "480x240+000-000")
+r4 <- magick::image_read("plots.now/2br/0.75.png")
+#r4 <- magick::image_crop(r4, geometry = "480x240+000-000")
+r5 <- magick::image_read("plots.now/2br/1.png")
+#r5 <- magick::image_crop(r5, geometry = "480x240+000-000")
+img <- c(r,r2, r3, r4, r5)
+
+img <- image_append(img, stack = FALSE)
+image_scale(img, "x100")
+```
+
+```{r gifs1b, echo=FALSE, fig.cap="One barrier scenario: row one shows the true simulated spatial field; and row two and three the spatial estimate for the transparent barrier model and the stationary model"}
+r <- magick::image_read("plots.now/1b.sim.png")
+image_append(image_scale(r, "x500"))
+```
+
+```{r dens1b, echo=FALSE, fig.cap="One barrier scenario: density for the range hyperparameter. Results for the barrier model are shown in row one and the stationary model in row two. Columns show the different range fractions from 0.01 to 1 in ascending order"}
+r <- magick::image_read("plots.now/1br/0.01.png")
+#r <- magick::image_crop(r, geometry = "480x240+000-000")
+r2 <- magick::image_read("plots.now/1br/0.25.png")
+#r2 <- magick::image_crop(r2, geometry = "480x240+000-000")
+
+r3 <- magick::image_read("plots.now/1br/0.5.png")
+#r3 <- magick::image_crop(r3, geometry = "480x240+000-000")
+r4 <- magick::image_read("plots.now/1br/0.75.png")
+#r4 <- magick::image_crop(r4, geometry = "480x240+000-000")
+r5 <- magick::image_read("plots.now/1br/1.png")
+#r5 <- magick::image_crop(r5, geometry = "480x240+000-000")
+img <- c(r,r2, r3, r4, r5)
+img <- image_append(img, stack = FALSE)
+image_scale(img, "x100")
+
+```
+
+######march 6
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Two symmetrical barrier scenario: for the different models the spatial estimate is shown on the left and the density of the range hyperparameter on the right. Row one shows the results for the Transparent Barrier model, row two for the Barrier model and row three for the stationary model."}
+r <- magick::image_read("gif.sel/geom1/sm1.5w3r2seed880.n30/mean.tbm.png")
+r2 <- magick::image_read("gif.sel/geom1/sm1.5w3r2seed880.n30/mean.bm.png")
+r3 <- magick::image_read("gif.sel/geom1/sm1.5w3r2seed880.n30/mean.st.png")
+r4 <- magick::image_read("gif.sel/geom1/sm1.5w3r2seed880.n30/0.4.png")
+
+r1 <- c(r, r2, r3)
+r1 <- image_append(r1, stack = TRUE)
+r1 <- image_scale(r1, "300")
+
+
+img <- c(r1, r4)
+image_append(img)
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Two symmetrical barrier scenario: for the different models the spatial estimate is shown on the left and the density of the range hyperparameter on the right. Row one shows the results for the Transparent Barrier model, row two for the Barrier model and row three for the stationary model."}
+r <- magick::image_read("gif.sel/geom1.2/sm1.5w3r2seed880.n50/mean.tbm.gif")
+r2 <- magick::image_read("gif.sel/geom1.2/sm1.5w3r2seed880.n50/mean.bm.gif")
+r3 <- magick::image_read("gif.sel/geom1.2/sm1.5w3r2seed880.n50/mean.st.gif")
+r4 <- magick::image_read("gif.sel/geom1.2/sm1.5w3r2seed880.n50/0.4.png")
+
+r1 <- c(r, r2, r3)
+r1 <- image_append(r1, stack = TRUE)
+r1 <- image_scale(r1, "300")
+
+
+img <- c(r1, r4)
+image_append(img)
+```
+
+## Simulation for Poisson observations
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Two symmetrical barrier scenario: for the different models the spatial estimate is shown on the left and the density of the range hyperparameter on the right. Row one shows the results for the Transparent Barrier model, row two for the Barrier model and row three for the stationary model."}
+r <- magick::image_read("gif.sel/geom1/sm1.5w2r4seed874/mean.tbm.png")
+r2 <- magick::image_read("gif.sel/geom1/sm1.5w2r4seed874/mean.bm.png")
+r3 <- magick::image_read("gif.sel/geom1/sm1.5w2r4seed874/mean.st.png")
+r4 <- magick::image_read("gif.sel/geom1/sm1.5w2r4seed874/0.3.png")
+
+r1 <- c(r, r2, r3)
+r1 <- image_append(r1, stack = TRUE)
+r1 <- image_scale(r1, "300")
+
+
+img <- c(r1, r4)
+image_append(img)
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Two symmetrical barrier scenario: for the different models the spatial estimate is shown on the left and the density of the range hyperparameter on the right. Row one shows the results for the Transparent Barrier model, row two for the Barrier model and row three for the stationary model."}
+r <- magick::image_read("gif.sel/geom2/sm0w1r4seed987.n50/mean.tbm.gif")
+r2 <- magick::image_read("gif.sel/geom2/sm0w1r4seed987.n50/mean.bm.gif")
+r3 <- magick::image_read("gif.sel/geom2/sm0w1r4seed987.n50/mean.st.gif")
+r4 <- magick::image_read("gif.sel/geom2/sm0w1r4seed987.n50/0.3.png")
+
+r1 <- c(r, r2, r3)
+r1 <- image_append(r1, stack = TRUE)
+r1 <- image_scale(r1, "300")
+
+
+img <- c(r1, r4)
+image_append(img)
+```
+
+
+
+```{r, echo=FALSE, out.width="100%", fig.cap= "Two symmetrical barrier scenario: for the different models the spatial estimate is shown on the left and the density of the range hyperparameter on the right. Row one shows the results for the Transparent Barrier model, row two for the Barrier model and row three for the stationary model."}
+r <- magick::image_read("gif.sel/geom2/sm0w1r4seed763/mean.tbm.gif")
+r2 <- magick::image_read("gif.sel/geom2/sm0w1r4seed763/mean.bm.gif")
+r3 <- magick::image_read("gif.sel/geom2/sm0w1r4seed763/mean.st.gif")
+r4 <- magick::image_read("gif.sel/geom2/sm0w1r4seed763/0.3.png")
+
+r1 <- c(r, r2, r3)
+r1 <- image_append(r1, stack = TRUE)
+r1 <- image_scale(r1, "300")
+
+
+img <- c(r1, r4)
+image_append(img)
+```
+
+
+
+
+

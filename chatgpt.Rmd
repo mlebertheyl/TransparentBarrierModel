@@ -1,0 +1,976 @@
+write a new appendix section in my paper draft about bayesian coverage for the the mean of the range hyperparameter. The coverage is evaluated with the transparent barrier model, barrier model, and stationary model. Additionally, i'm also evaluating the length of the confidence interval for each model. 
+Consider the following:
+- the coverage and length of the confidence interval were evaluated for the simulation study
+- For configuration 1 and 2, corresponding to the area separated by a barrier with a canal in the middle, to the area separated by a barrier completely diving the area in half, respectively: I simulated data for scenarios where the right barrier had a range fraction of 0.01, 0.5, 0.8, and 1. The left barrier had a range fraction of 0.01. The simulated data was modeled using the transparent barrier model, the barrier model and the stationary model.
+- I simulated 100 data for each scenario, meaning I had 100 simulated data sets for configuration 1 with range fraction 0.01;  100 simulated data sets for configuration 1 with range fraction 0.5;  100 simulated data sets for configuration 1 with range fraction 0.8; and  100 simulated data sets for configuration 1 with range fraction 1. Same for configuration 2.
+- In total I simulated 2 config x 4 range fraction x 100 different data = 800 simulated data sets.
+- All of the data set were then evaluated with the three models (transparent barrier model, barrier model, and stationary model)
+- I am showing the results in a table organized as follows:
+
+
+#######################################################
+Now I have to write about the prior correlation. 
+Consider:
+- Consider the results are presented visually in the latest version of my draft, file "draft3", "Fig. 6". Consider this figure to write the results in this section,  draw conclusions of the transparent barrier model that are supported by this results.
+- Consider what is written in the scientific article file "Haakon 2019" section "Modelling fish larvae in the Finnish Archipelago", specifically what is written about Figure 10. My article has the same kind of figure but in my case is for the transparent barrier model instead of the classical barrier model presented in "Haakon 2019".
+– Consider what is written in section "simulation study" of my draft (file "draft3")  specifically about Figure 2 ("Fig 2." file "draft3") . This section and figure (Fig 2." file "draft3") are about the simulation study as the present section has the same type of plots but for the for the applied case.
+The plots in the figure "Fig. 6" in file "draft3" are organized as follows:
+
+- Consider file "draft3", "Fig. 6" has 16 plots organized in 4 columns and 4 rows. The figure organization is as follows
+  - rows represent different range fraction combinations for barrier 1, 2 and 3.
+    - row 1: all barriers (barrier 1, barrier 2, and barrier 3) have range fraction equal to 1.
+    - row 2: barrier 1 has range fraction equal to 0.01, while barriers 2 and 3 have range fractions equal to 1. This means only barrier 1 is present as the others have the same range fraction as the normal area.
+    - row 3: barrier 1 has range fraction equal to 0.01, barrier 2 range fraction equal to 0.1, and barrier 3 range fraction equal to 1. This means only barrier 1 and 2 are while barrier 3 has the same range fraction as the normal area.
+    - row 4: barrier 1 has range fraction equal to 0.01, barrier 2 range fraction equal to 0.1, and barrier 3 range fraction equal to 0.2. Meaning all barriers are present, and their range fraction is reduced by 0.01, 0.1 and 0.2 respectively.
+  
+  - columns show the mesh and the prior correlation of different points with the same fraction per row.
+    - column 1: shows the mesh with the barriers colored according to their presence. Red dots represent the locations we use to draw the prior correlation in column 2, 3, and 4.
+      - column 1, row 1: the mesh without any colors as range fraction are all equal to 1 for row one so there are virtually no barriers. Boundaries in blue are shown because these are coastlines, islands, and sea deeper than -500 we classify as holes for mesh construction, hence the mesh is built considering this holes. 
+      - column 1, row 2: only barrier 1 is colored, as the other barriers have range fraction equal to 1 coastlines, islands, and continental land are colored in light brown, and sea deeper than -500 is colored in dark blue.
+      - column 1, row 3: barrier 2 is added and colored in gray.
+      - column 1, row 4: barrier 3 is added and colored in light blue.
+
+  - column 2 to 4: shows the prior correlation with respect to one of the red dots on the mesh in column 1. In these plots, coastlines, islands, and continental land are colored in light brown, sea deeper than -500 is colored in dark blue, sea with depth between -500 and -50 meters is colored in gray, and sea with depth between -50 and -30 is colored in light blue. Columns 2 to 4 have all the barriers colored no matter their range fraction.
+      - column 2: shows the correlation for the utmost left point in the mesh shown in column 1. 
+      - column 3: shows the correlation for the middle point in the mesh shown in column 1. 
+      - column 4: shows the correlation for the right point in the mesh shown in column 1. 
+  
+- Consider red points do not exactly match observation location but are located in areas where we do have observations.
+- Consider having all barrier range fractions equal to 1 means they all have the same range as the normal area so it actually means there are no barrier regions in this model. Results from this model represent what we would obtain using the stationary model
+(\ref{fig6} row 1). This model is unrealistic, but it useful to compare it with the results we obtain when considering the different barriers. 
+- Consider the baseline realistic model is coastlines, islands, continental land, and sea deeper than -500 meters as impermeable barriers and cutting off the paths that go over them. This is achieve by putting a range fraction of 0.01 on barrier 1, and leaving the range fraction of barrier 2 and 3 equal to 1 so we virtually have one impermeable barrier and all of the rest is normal area (\ref{fig6} row 2). 
+- Consider the scenario a bit closer to reality is putting a range fraction of 0.01 in barrier 1, and 0.1 in barrier 2, giving the latter some kind of permeability (\ref{fig6} row 3).
+- Consider the scenario a realistic scenario being the one where we put a range fraction of 0.01 in barrier 1, 0.1 in barrier 2, and 0.2 in barrier 3 giving barrier 2 and 3 it permeability according to the suitability for dugongs to move in depths covered by this barriers. (\ref{fig6} row 4).
+- Consider we are using 4 possible scenario. The first one with no barriers; second one only impermeable barrier (barrier 1); the third one with impermeable barriers and another set of barriers with the same permeability (barrier 2); and the fourth one with with impermeable barriers and two set of barriers with different permeability (barrier 2, and barrier 3).
+- Consider the analysis of the results in this section being:
+  - The model with barrier range fractions all equal to 1 shows movement of dugong over land.
+  - The model considering only barrier 1, allows dugong to move "freely" in open sea with deep waters which is unrealistic. This affect particularly observations on the bottom of the mesh where normal area is adjacent to deep sea. Observations on the area enclosed by islands, are not deeply affected by the presence of barrier 2 as in this area there's no sea with depth between -500 and 50 meters. In other words in \ref{fig6} we see noticeable changes between row two and three in column 4, no big changes between row two and three in column 2, and no big changes between row two and three in column 3.
+  - The model considering all barriers deeply affects the movement in the area enclosed by islands since the middle of this area has depths between -50 and -30. When we consider barrier 3 we (and the other barrier) we restrict the movements of dugong to shallow water  which is a realistic assumption given their diving behavior. In this case dugong can actually "enter" barrier 3 however they will have a higher chance of moving in shallow water as we see in \ref{fig6} row 4 where the correlation expansion tends to favor shallow waters but doesn't completely avoid barrier 3 it's just the movement tends to expand less in this area.
+  - Models with other range fractions for barriers 2 and 3 are shown in the supplementary section.
+  
+All of the above are the results I need to write for this section including a figure caption for "Fig. 6". What I wrote as the description of the plots of "Fig. 6" doesn't necessarily need to be part of the figure caption on the contrary results should be explained in this section. When writing the text of this section avoid describing the figure directly and talk more about the models referencing the figure in between parenthesis. What I wrote here are the considerations to keep in mind to write this section but it has no particular order so the writing of the results shouldn't consider the order, and should be written in an order that makes the most sense. These considerations are only main ideas, but the section should be written in a manner and tone matching the rest of the file "draft3" and matching the tone a scientific article has in general. 
+
+Here is a draft of the subsection discussing prior correlation in the "Application to Dugong species distribution in the Red Sea" section, informed by Figure 6 in `draft3.pdf`, the simulation study section, and the treatment of prior correlation in `Haakon 2019.pdf`:
+
+Now I need to add the final subsection for the section about  "Application to Dugong species distribution in the Red Sea" in "draft3". This subsection goes right after what you wrote and add to the draft as "prior correlation".
+For this consider:
+- Everything that it is written in "draft3"
+- Consider what is written in the scientific article file "Haakon 2019" section "Modelling fish larvae in the Finnish Archipelago", specifically what is written about Figure 12. My article has the same kind of figure but in my case is for the transparent barrier model instead of the classical barrier model presented in "Haakon 2019".
+- Consider everything regarding "Fig 3." in section "Results" in file "BM dolphin" as it is the same tyoe of results I am producing here.
+- Consider the results are presented visually in the latest version of my draft, file "draft3", "Fig. 7". Consider this figure to write the results in this section,  draw conclusions of the transparent barrier model that are supported by this results.
+
+– Consider what is written in section "simulation study" of my draft (file "draft3")  specifically about Figure 3 and Figure 4 ("Fig 3." and "Fig 4." file "draft3"). "Fig 3." and "Fig 4." file "draft3" are about the simulation study, the present section has the same type of plots for the mean and standard deviation but for the applied case.
+- Consider file "draft3", "Fig. 7" has 8 plots organized in 2 columns and 4 rows. The figure organization is as follows
+  - rows represent different range fraction combinations for barrier 1, 2 and 3.
+    - row 1: all barriers (barrier 1, barrier 2, and barrier 3) have range fraction equal to 1.
+    - row 2: barrier 1 has range fraction equal to 0.01, while barriers 2 and 3 have range fractions equal to 1. This means only barrier 1 is present as the others have the same range fraction as the normal area.
+    - row 3: barrier 1 has range fraction equal to 0.01, barrier 2 range fraction equal to 0.1, and barrier 3 range fraction equal to 1. This means only barrier 1 and 2 are while barrier 3 has the same range fraction as the normal area.
+    - row 4: barrier 1 has range fraction equal to 0.01, barrier 2 range fraction equal to 0.1, and barrier 3 range fraction equal to 0.2. Meaning all barriers are present, and their range fraction is reduced by 0.01, 0.1 and 0.2 respectively.
+  
+  - column 1 represent the posterior mean estimate of the spatial effect for the models considering different range fractions
+  - column 2 represents the posterior standard deviation of the spatial effect for the models considering different range fractions.
+  - only barrier 1 is colored, light brows is land and dark blue is sea depth below -500 meters.
+  - black dots are the dugong observations
+  
+- Consider the analysis of the results in this section being
+  - when no barriers are considered (Figure \ref{fig7}, row 1) the posterior has no drastic change in space. where we have dugong observations we have a higuer mean that decreases smoothly in space tpwards the regions with no observations. the mean close to the coeastline where there are no observations is constant and non 0 eventhough this area has numerous islands around.
+  - when barrier 1 is considered (Figure \ref{fig7}, row 2) we see the mean along the coastline where there are no observations has much more drastic changes since it considers the island around and realizes dugongs cannot be there if there's too many islands blocking the way even if they are on the south coast they cannot move directly upward through the coast because of the island blocking the path.
+  - we also see the mean has drastic cuts when the space is divided by barrier 1 so even if we have observations on one side the other side of the island will have a zero posterior mean if the barrier expands too long and there's no way a dugong can easily find a path to go from one side to the other.
+  - we also see some concentration of values around the impermeable barrier as dugongs would encounter this barrier and stay there. this results in higher posterior mean around the islands where observations would be "trapped" compared to the case we are no considering the islands.
+  - when we add barrier 2 (Figure \ref{fig7}, row 3) we see the same effect. dugongs are "trapped" in normal area surrounded by barriers so instead of having a mean that is spread in space, the mean is very high and concentrated in this enclosed spaces and then drastically low on the other side of the barrier. 
+  - In the case of only barrier 1 the mean decreased smoothly in sea areas, now that we are adding restrictions in the sea (barrier 2) the mean is highly concentrated and then 0 in places where normal area and barrier 2 are adjacent, south of the map.
+  - aading barrier 3 in the middle of the area enclosed by islands restructs the movement even more and spots that were somewhat connected in the case with only barrier twp seem to be less conected now.
+  - Now for example that we added barrier 3 (even when we added barrier 2) the coastline with no observations has non zero values, almost like in the stationary case. This is due to the dugong movement being restricted towards open sea so they will necesarily move along the coast even if the path to get there is not that easy becase of the islands.
+  - Adding barrier 3 shows some disconnection between places separated by deep sea in the enclosed area (not open sea) which is realistic given their diving behavior.
+  - we see the dugong movement along shallow instead of homogeneously spread which is realistic considering the behavior of the animal.
+  - column related to standard deviation has similar results than what we saw in the section "Simulation Study" in "draft3" about the posterior standard deviation. 
+  - in the dugong example, narrow inlets are places that an individual is less likely to visit as opposed to the large open sea areas but if the individual gets into an inlet, it will remain in there for a longer period. This leads to higher standard deviations compared to a stationary SGF; e.g. either there is a lot of fish, or there are almost no fish, in the inlet. So places with high standard deviation will vary depending on were the barriers are. If a place is surrounded by barriers the standard deviation will be higher
+  
+  All of the above are the results I need to write for this section including a figure caption for "Fig. 7". What I wrote as the description of the plots of "Fig. 7" doesn't necessarily need to be part of the figure caption on the contrary results should be explained in this section. When writing the text of this section avoid describing the figure directly and talk more about the models referencing the figure in between parenthesis. What I wrote here are the considerations to keep in mind to write this section but it has no particular order so the writing of the results shouldn't consider the order, and should be written in an order that makes the most sense. These considerations are only main ideas, but the section should be written in a manner and tone matching the rest of the file "draft3" and matching the tone a scientific article has in general. 
+
+Read file "draft4" and correct considering:
+- Consider the file "Haakon 2019". This file is the scientific article introducing the barrier model, I am basing my model on the barrier model and adding to it.
+- Consider the file "BM dolphin". This is a scientific article that uses the barrier model applied to dolphins. 
+- Make sure my article is coherent and makes sense when comparing it with "Haakon 2019" and "BM dolphin".
+- My draft is to be submitted in the "Journal of Agricultural, Biological and Environmental Statistics" so please check and correct the format. Some examples for this journal are "ex1", "ex2", and "ex3" files. This are only examples for the journal format, the topic has nothing to do with my research.
+- I have only written until the results section. I am missing discussion and conclusion. For now I want to correct what I have.
+
+
+
+
+
+
+
+I am writing an article and I need you to correct it considering the following:
+- Read file "draft4", this is my article.
+- Consider the description of the project and the files attached.
+- Consider the file "Haakon 2019". This file is the scientific article introducing the barrier model, I am basing my model on the barrier model and adding to it. 
+- Consider the file "BM dolphin". This is a scientific article that uses the barrier model applied to dolphins.  
+- Make sure my article is coherent and makes sense when comparing it with "Haakon 2019" and "BM dolphin". 
+- My draft is to be submitted in the "Journal of Agricultural, Biological and Environmental Statistics" so please check and correct the format. Some examples for this journal are "ex1", "ex2", and "ex3" files. This are only examples for the journal format, the topic has nothing to do with my research.
+- Check all the figures and make sure the text matches the figures.
+- Check everything is coherent and fluent
+- I have only written until the results section. I am missing discussion and conclusion. For now I want to correct what I have. 
+
+########################################################
+
+Abstract 1
+Spatial Gaussian fields (SGFs) are essential tools in spatial and spatio-temporal modeling, with the Matérn model frequently applied due to its flexibility and computational advantages. However, standard SGFs assume stationarity and isotropy, conditions that become unrealistic in environments with physical barriers. The Barrier model, introduced by Bakka et al. (2019), addresses this limitation but assumes that barriers are fully impermeable, a significant restriction in real-world applications. To overcome this limitation, we propose the Transparent Barrier model, an innovative approach that incorporates barriers with varying permeability, thus providing greater modeling flexibility and realism. We illustrate the utility of this model using the distribution of marine megafauna, specifically Dugongs (Dugong dugon), in the Red Sea. Our results demonstrate that the Transparent Barrier model accurately captures complex spatial structures involving partially permeable barriers while maintaining computational efficiency. This enhanced accuracy and flexibility offer valuable insights for ecological conservation and spatial management in marine environments.
+
+Abstract 2
+Spatial Gaussian fields (SGFs) are essential tools in spatial and spatio-temporal modeling, with the Matérn model frequently applied due to its flexibility and computational advantages. However, standard SGFs assume stationarity and isotropy, conditions that become unrealistic in environments with physical barriers. The Barrier model, introduced by Bakka et al. (2019), addresses this limitation but assumes that barriers are fully impermeable, a significant restriction in real-world applications. To overcome this limitation, we propose the Transparent Barrier model, an innovative approach that incorporates barriers with varying permeability, thus providing greater modeling flexibility and realism. 
+
+We illustrate the utility of this approach on species distribution models (SDMs) of marine megafauna, specifically Dugongs (Dugong dugon), in the Red Sea. Our results demonstrate that the Transparent Barrier model accurately captures complex spatial structures involving partially permeable barriers while maintaining computational efficiency. This enhanced accuracy and flexibility offer valuable insights for ecological conservation and spatial management in marine environments.
+
+
+
+---
+
+\section{Introduction}\label{sec1}
+
+Spatial Gaussian fields (SGFs) are widely used in spatial and spatio-temporal modeling, particularly when addressing residual spatial structures resulting from unmeasured covariates, spatial aggregation, or spatial noise. Among SGFs, the Matérn covariance model is widely adopted due to its flexibility and computational efficiency, further enhanced by recent methodological advancements such as the integrated nested Laplace approximation (INLA) (Rue et al., 2009) and the stochastic partial differential equation (SPDE) Lindgren et al., 2011) approach, facilitating efficient Bayesian inference.
+
+Despite these advantages, standard SGFs typically rely on assumptions of stationarity and isotropy, meaning the spatial autocorrelation structure remains invariant under spatial translation and rotation. These assumptions often become unrealistic in complex geographical environments characterized by physical barriers, such as islands or coastlines. In these contexts, spatial dependence should not solely depend on Euclidean distance, as barriers significantly influence spatial connectivity.
+
+To address this limitation, the Barrier model was introduced as an extension of the Matérn covariance framework, designed explicitly for non-stationary spatial contexts. The Barrier model explicitly removes spatial paths crossing impermeable barriers, thus reducing spatial dependency between locations separated by these barriers. However, the assumption of impermeability limits the applicability of the Barrier model in many real-world scenarios, where barriers can vary significantly in permeability.
+
+########
+To address this, the Transparent Barrier model has been developed, introducing a framework to account for barriers with partial permeability. For instance, islands may act as impermeable barriers for marine species, whereas sand patches with tidal water coverage may allow partial movement. The Transparent Barrier model extends the original by incorporating transparency as a parameter controlling permeability, enabling it to handle both fully impermeable and partially permeable barriers within the same model. The latter class of barriers will be called transparent barriers.
+####
+
+To overcome this issue, we propose the Transparent Barrier model, an innovative extension of the Barrier framework designed to accommodate barriers with varying permeability. This approach seamlessly models both fully impermeable and partially permeable barriers
+
+By introducing a transparency parameter controlling barrier permeability, this approach seamlessly models both fully impermeable and partially permeable barriers. This flexibility significantly expands the model’s practical applicability while retaining computational efficiency comparable to stationary models.
+
+In this study, we introduce the Transparent Barrier model and illustrate its utility through an application involving marine megafauna, specifically Dugongs (\textit{Dugong dugon}), in the Red Sea. We demonstrate how this novel modeling approach effectively captures complex spatial structures involving barriers of varying permeability, providing valuable insights for ecological management and conservation planning.
+
+\section{Motivating Example}\label{sec2}
+
+Marine megafauna, such as whales, sharks, and dugongs, play pivotal roles in marine ecosystems. Often regarded as keystone species, they influence the abundance and distribution of other marine organisms. Dugongs, for instance, significantly contribute to the health of seagrass ecosystems by grazing on seagrass beds. This grazing activity prevents overgrowth, promotes habitat complexity, and supports diverse marine life. Consequently, conservation efforts targeting marine megafauna are vital to maintain marine ecosystem resilience.
+
+Species distribution models (SDMs) provide valuable insights into species distributions, habitat preferences, and ecological interactions. Traditional SDMs predict species occurrences using environmental variables, such as water temperature, depth, and ocean currents, employing methods like MaxEnt, Random Forest, and Generalized Additive Models (GAMs). However, the predictive accuracy of these models heavily depends on comprehensive environmental data availability. In many practical scenarios, extensive environmental data are not available, limiting traditional SDMs.
+
+When comprehensive covariate information is lacking, modeling spatial random effects becomes crucial to account for unexplained spatial dependencies. This approach effectively captures additional variation in species distributions driven by unobserved spatial processes.
+
+
+In this study, we focus on modeling Dugong distribution along the northern coast of the Saudi Arabian Red Sea, an area characterized by a complex spatial structure with numerous islands and physical barriers with varying permeability. Existing geographic data groups islands imprecisely, complicating detailed spatial modeling. To address this issue, we employ bathymetric data to accurately represent physical barriers, rather than use it as direct environmental covariate.
+
+#######
+
+
+
+\section{Methodology}
+
+\subsection{Background}
+
+Spatial Gaussian fields (SGFs) are commonly applied in spatial and spatio-temporal modeling, particularly for capturing residual spatial structures arising from unmeasured covariates, spatial aggregation, or spatial noise. Among these, the Matérn covariance model is a prevalent choice due to its flexibility and computational efficiency, enhanced by recent methodological advancements such as the integrated nested Laplace approximation (INLA) and stochastic partial differential equation (SPDE) approaches.
+
+The Matérn covariance function for a spatial random process \$\mu(s)\$, defined by the distance \$|s\_i - s\_j|\$ between locations \$s\_i\$ and \$s\_j\$, is expressed as:
+
+\begin{equation}
+\mathrm{Cov}(\mu(s\_i), \mu(s\_j)) = \sigma\_{\mu}^{2}\frac{2^{1-\nu}}{\Gamma(\nu)}\left(\kappa|s\_i - s\_j|\right)^{\nu}K\_{\nu}\left(\kappa|s\_i - s\_j|\right),
+\end{equation}
+
+where \$\sigma\_{\mu}^{2}\$ is the marginal variance, \$K\_{\nu}\$ is the modified Bessel function of the second kind, and parameters \$\nu > 0\$ and \$\kappa > 0\$ control smoothness and scale.
+
+By setting \$\nu = 1\$ and using \$\kappa = \sqrt{8\nu}/r\$, we obtain:
+
+\begin{equation}
+\mathrm{Cov}(\mu(s\_i), \mu(s\_j)) = \sigma\_{\mu}^{2}\left(\frac{\sqrt{8}}{r}|s\_i - s\_j|\right) K\_{1}\left(\frac{\sqrt{8}}{r}|s\_i - s\_j|\right),
+\end{equation}
+
+where the range parameter \$r\$ is the distance at which the spatial correlation approximates \$0.1\$. Since the Matérn covariance depends on Euclidean distance, standard SGFs assume stationarity and isotropy.
+
+The Barrier model addresses non-stationarity by differentiating between normal (\$\Omega\_n\$) and barrier (\$\Omega\_b\$) regions, assigning separate Matérn fields. This leads to:
+
+\begin{align}
+& \mu(s)-\nabla \cdot \frac{r\_n^2}{8} \nabla \mu(s)=r\_n \sqrt{\frac{\pi}{2}} \sigma\_{\mu} \mathcal{W}(s), \quad s \in \Omega\_n \nonumber \\
+& \mu(s)-\nabla \cdot \frac{r\_b^2}{8} \nabla \mu(s)=r\_b \sqrt{\frac{\pi}{2}} \sigma\_{\mu} \mathcal{W}(s), \quad s \in \Omega\_b,
+\end{align}
+
+where \$r\_n\$ and \$r\_b\$ denote spatial ranges in normal and barrier areas, respectively, and \$\mathcal{W}(s)\$ denotes Gaussian white noise.
+
+\subsection{Transparent Barrier Model}
+
+The Transparent Barrier model extends the Barrier model by allowing varying permeability through a transparency parameter. The system becomes:
+
+\begin{align}
+& \mu(s)-\nabla \cdot \frac{r\_n^2}{8} \nabla \mu(s)=r\_n \sqrt{\frac{\pi}{2}} \sigma\_{\mu} \mathcal{W}(s), \quad s \in \Omega\_n \nonumber \\
+& \mu(s)-\nabla \cdot \frac{r\_{b\_i}^2}{8} \nabla \mu(s)=r\_{b\_i} \sqrt{\frac{\pi}{2}} \sigma\_{\mu} \mathcal{W}(s), \quad s \in \Omega\_{b\_i}, \quad i=1,\dots,l
+\end{align}
+
+Sparse precision matrices facilitate computational efficiency using the Finite Element Method (FEM). A Gaussian field approximation \$\tilde{u}(s)\$ at mesh nodes with linear finite element basis functions \$\psi\_i(s)\$ is:
+
+\begin{equation}
+\tilde{u}(s) = \sum\_{i=1}^{n}u\_i\psi\_i(s),
+\end{equation}
+
+leading to the sparse precision matrix \$\mathbf{Q}\$ necessary for large-scale computations.
+
+\subsection{Mesh Discretization}
+
+In non-stationary contexts, precise mesh construction is crucial, explicitly representing islands and barriers as internal boundaries. This ensures accurate spatial dependency representation. Figure \ref{fig1} shows mesh examples with barriers illustrated in red. The configurations highlight spatial scenarios involving a barrier with a canal and a fully impermeable barrier.
+
+\begin{figure}
+\centering
+\caption{Mesh examples illustrating barrier configurations. Left: Extended mesh boundary; right: zoomed-in region of interest. Rows represent scenarios with partial (top) and complete barrier division (bottom).}
+\label{fig1}
+
+\end{figure}
+
+\subsection{Correlation Structure}
+
+Barrier permeability is determined by the range fraction, controlling spatial connections across barriers. Higher values increase permeability, thus strengthening correlations. Figure \ref{fig2} illustrates barrier permeability transitions from impermeable (Barrier model) to permeable (stationary model). The Transparent Barrier model effectively captures intermediate scenarios.
+
+\begin{figure}
+\centering
+
+\caption{Spatial correlation plots for two barrier configurations and varying permeability (range fractions 0.01 to 1). Columns represent different reference points; rows represent permeability levels.}
+\label{fig2}
+\end{figure}
+
+\section{Simulation Study}
+
+To evaluate model performance, spatial fields were simulated using the true spatial structure and then fitted using three distinct approaches: the \textbf{Stationary model}, assuming no barriers; the \textbf{Barrier model}, imposing complete impermeability; and the proposed \textbf{Transparent Barrier model}, allowing varying permeability through an adjustable range parameter. This evaluation framework assesses each model's effectiveness in recovering the underlying spatial field under different permeability conditions.
+
+Simulations involved two geometric configurations: one with the study area divided by two barriers connected by a canal (Configuration 1), and another divided by two connected barriers without a canal (Configuration 2). These configurations are illustrated in Figure \ref{fig3} and Figure \ref{fig4}, respectively.
+
+Spatial ranges of 2 (Configuration 1) and 4 (Configuration 2) were set for normal regions, while barrier regions' ranges were fractions (0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, and 1) of these values, weakening spatial correlation across barriers. Gaussian spatial fields were simulated using precision matrices from mesh discretization and SPDE formulations, incorporating observational noise to reflect real-world scenarios.
+
+In all simulations, the left barrier remained impermeable (range fraction = 0.01), whereas permeability of the right barrier varied through adjusting the range fraction parameter. Each row in Figure \ref{fig3} and Figure \ref{fig4} corresponds to different right-barrier permeability levels. The figures present posterior mean (left), posterior standard deviation (center), and posterior distribution of spatial range for the normal area (right). Results from the Transparent Barrier model are shown prominently, with corresponding results from the Barrier and Stationary models displayed in smaller panels on the right—Barrier model above the Stationary model.
+
+The posterior spatial fields highlight clear distinctions across models and permeability levels. At low permeability (range fraction 0.01), the Transparent Barrier model matches the Barrier model, with sharp discontinuity across the barrier. As permeability increases (range fractions 0.3–0.8), the Transparent Barrier model captures greater spatial continuity, 
+
+unlike the Barrier model, which maintains discontinuity regardless of true permeability, and the Stationary model, which overly smooths across barriers. When the barrier’s range fraction approaches 1, the Transparent Barrier model closely resembles the Stationary model but remains distinct due to the impermeable left barrier.
+
+Posterior standard deviation shows a similar trend, with the Transparent Barrier model realistically distributing uncertainty across barriers. The Barrier model exaggerates uncertainty, while the Stationary model underestimates it, especially near barrier edges. High standard deviation near impermeable barriers corresponds to restricted movement and longer residence times in these areas, creating uncertainty in occupancy.
+
+Regarding posterior spatial range estimates, the Stationary model tends to underestimate spatial ranges by averaging permeability across normal and barrier regions. Conversely, the Barrier model overestimates ranges due to its impermeability assumption. The Transparent Barrier model, with spatially varying permeability, provides posterior range estimates more aligned with the true spatial structure. Further supporting simulation results are included in the supplementary material.
+
+These findings demonstrate the Transparent Barrier model’s effectiveness in realistically bridging the gap between impermeable and stationary assumptions, enhancing spatial inference accuracy in environments with varying barrier permeability.
+
+\begin{figure}
+\centering
+\caption{Posterior results for the canal-divided configuration (Configuration 1). Rows correspond to right-barrier range fractions (0.01, 0.3, 0.5, 0.7, and 0.8), with left barrier impermeable. Columns: (1) posterior mean spatial field, (2) posterior standard deviation, (3) posterior distribution of spatial range in the normal area. Transparent Barrier model results shown prominently, with Barrier (top) and Stationary (bottom) model comparisons to the right.}
+\label{fig3}
+\end{figure}
+
+\begin{figure}
+\centering
+\caption{Posterior results for the configuration without canal (Configuration 2). Rows represent varying right-barrier permeability (range fractions: 0.01, 0.3, 0.5, 0.7, and 0.8), left barrier impermeable. Columns represent: (1) posterior mean spatial field, (2) posterior standard deviation, (3) posterior distribution of spatial range in normal area. Transparent Barrier model prominently displayed, with Barrier (top) and Stationary (bottom) model comparisons in smaller panels.}
+\label{fig4}
+\end{figure}
+
+\section{Application to Dugong Species Distribution in the Red Sea}
+
+Dugongs (\textit{Dugong dugon}) inhabit shallow coastal waters where their primary food source, seagrass, thrives. Seagrass meadows, abundant in intertidal and subtidal zones, typically occur at depths shallower than 10 meters, though some extend deeper based on water clarity and light availability. Dugong movements closely follow tidal cycles, foraging in intertidal zones during high tides and retreating to deeper waters during low tides. Their diving behavior aligns with this ecological dependency, as most dives occur near the surface, with approximately 72% within 3 meters and an average dive depth of 4.8 meters.
+
+The Red Sea, a marine biodiversity hotspot and home to vulnerable dugong populations with limited data, provides an ideal context for demonstrating the Transparent Barrier model. To enhance low-resolution existing maps, publicly available bathymetry data were used to represent islands and depths accurately, despite a coarse 100-meter resolution.
+
+
+It's important to note that the bathymetry's low resolution and the use of a simplified, artificial dataset—based on local ecological knowledge approximating potential dugong sightings—mean that the results presented here are illustrative rather than reflective of actual dugong behavior. 
+
+This toy dataset emulates the type of incidental sightings data that might be collected in real-world scenarios.
+
+\subsection{Mesh Construction}
+
+Barriers were incorporated into the mesh construction in three steps. Initially, coastlines, islands, and deep sea areas (depth >500 meters) were treated as impermeable barriers (Barrier 1). Subsequent permeable barriers included Barrier 2 (depths -500 to -50 meters) and Barrier 3 (depths -50 to -30 meters). Delaunay triangulation facilitated adaptive mesh resolution, finer near barriers and dense observation points, coarser elsewhere, ensuring spatial precision and computational efficiency (Figure \ref{fig5}).
+
+\begin{figure}
+\centering
+\caption{Mesh construction for the dugong distribution study. Left: Impermeable Barrier 1 (land and sea >500m depth). Middle: Barrier 2 (-500 to -50 meters depth). Right: Barrier 3 (-50 to -30 meters depth). Red dots denote dugong sightings.}
+\label{fig5}
+\end{figure}
+
+\subsection{Prior Correlation}
+
+Prior correlation analyses assessed barrier design impacts on spatial structures before data fitting. Four scenarios were evaluated: no barriers, Barrier 1 only, Barriers 1 and 2, and all three barriers. Barrier configurations modified permeability using range fractions, capturing realistic dugong movement constraints.
+
+The no-barrier model (stationary) showed unrestricted correlation. Introducing Barrier 1 (impermeable) significantly constrained correlation to realistic water pathways. Adding Barrier 2 (range fraction 0.1) reduced open-water correlation further. The inclusion of Barrier 3 (range fraction 0.2) nuanced the model, allowing limited but realistic connectivity across semi-enclosed areas (Figure \ref{fig6}).
+
+\begin{figure}
+\centering
+\caption{Prior correlation structures under various barrier permeability settings. Each row corresponds to different barrier configurations, with reference points for correlation indicated in red.}
+\label{fig6}
+\end{figure}
+
+\subsection{Inference}
+
+Posterior inference was examined under the same four barrier scenarios, assessing mean and standard deviation of spatial fields. Without barriers, spatial means were unrealistically smooth. Barrier 1 introduced sharp transitions, closely matching physical constraints. Adding Barrier 2 and Barrier 3 progressively localized spatial effects, realistically reflecting habitat preferences and dugong movement restrictions (Figure \ref{fig7}).
+
+Posterior standard deviations mirrored these patterns, highlighting increased uncertainty in barrier-enclosed areas. This uncertainty arises from restricted dugong movements, producing patchy and realistic spatial uncertainty patterns.
+
+These results affirm the Transparent Barrier model's efficacy in realistically incorporating ecological constraints and spatial discontinuities, aligning posterior inferences closely with biological expectations.
+
+\begin{figure}
+\centering
+\caption{Posterior mean (left) and standard deviation (right) of spatial fields under different barrier configurations. Rows reflect various barrier settings. Impermeable barriers shown in light brown (land) and dark blue (deep sea). Black dots represent dugong observations.}
+\label{fig7}
+\end{figure}
+
+#Discussion
+
+#Discussion (Methodological Insights on Barrier Scaling and Range Fractions)
+
+A central aspect of the Transparent Barrier model is the ability to systematically adjust the permeability of barriers by modifying the local spatial range parameter in each region. In practical terms, this is achieved by expressing the range within a barrier as a fraction of the range in the normal (non-barrier) area, with lower fractions representing more restrictive (less permeable) barriers. While the ecological motivation for these range fractions is clear, 
+
+
+The range fraction is the ratio between the distance at which correlation is 0.13 in the normal area and the distance at which correlation is 0.13 in the barrier area. e.g. if 21 is the distance at which correlation between two points in the normal is 0.13 a range fraction of 0.2 means the distance at which correlation is 0.13 in the barrier area is 4.2 units.
+
+For any distance between two points we have a correlation value so we can fit a smoothing spline to empirical data of distance depending on correlation assuming the range for the normal area is the prior range. 
+
+We can also fit a smoothing spline of the distance depending on correlation assuming the range is the the prior range of the normal area by the range fraction.
+
+We can quantify the effect of adjusting the local range by examining the relative change in the spatial field's derivative at 0.13 between the original and scaled models. 
+
+The ratio of the derivatives at correlation = 0.13 between these two models quantifies how rapidly the spatial effect decays under the scaling imposed by the chosen range fraction. 
+
+In practice this means: if we assume the range for the normal area to be 21, and the range fraction to be 0.2 what we are saying is we want a *new* curve that goes through 4.2 at correlation 0.13. To get it we need to scale the derivative so it decays 6 times faster. Conversely if we want the overall decay in correlation to be 6 times faster in a barrier we need to use a range fraction of 0.2.
+
+Thinking about the distance at which correlation is 0.13 or deciding how fast the correlation curve decays might not be intuitive in some cases, however the same idea can easily be extended to choose distance fractions at any correlation value. Note that we call it distance fractions and not range fractions since the range is the specific distance in number of units at which correlation is 0.13. 
+
+What has to be done is very simple, and it only requires one extra step. First, we choose a correlation value, and change the distance fraction at this value. Second, find the scaling factor for the derivative such that the ratio between the distances given by the scaled and original spline models is in fact our distance fraction (at the chosen correlation value). 
+The only added step is we now need to find the range fraction at correlation 0.13 so we can plug this range into our model. This is easy, since we have our original and scaled models we only need to compare the ratio between the distances at correlation 0.13 and use this ratio as the range fraction in our model.
+We can also skip the first step and choose a scaling factor at a given correlation value and continue from there.
+
+What we do depends on the knowledge of the study area. Perhaps, the most intuitive is to take the distance fraction at a correlation value for which we have some information or intuition about. For example, we might expect the correlation between two points that are 2 units apart to be ~0.9, and inside the barrier we might expect the correlation between two points that 1 unit apart to be ~0.9, i.e. we reach correlation of ~0.9 value in half the distance because correlation dies faster inside the barrier. However, we do not have a precise idea of the distance fraction at correlation 0.13, so we need to work at correlation 0.9. In this case then, we use a distance fraction of 1 unit/2 units = 0.5, get the scaling factor, and then the appropriate range fraction at 0.13 to plug in the transparent barrier model. We call this distance fraction transparency at correlation 0.9. There is a table in the appendix that shows transparencies for different correlation values, scaling and resulting range fractions we would have to plug in the model for the applied case.
+
+This approach ensures that the choice of transparency for barriers is grounded in measurable, interpretable changes in the spatial decay rate, and can be adapted to specific ecological hypotheses. Furthermore, this methodology can be applied at multiple reference locations, allowing for spatially varying permeability to be encoded in a reproducible and statistically coherent manner.
+
+
+
+Appendix
+
+prior sensitivity analysis
+
+
+
+
+
+If you want to add a mathematical reference or a brief code-style summary, you could append:
+(optional—add at the end if you want)
+
+For example, given a desired local attenuation of the spatial gradient at location $x_0$ the required scaling factor $s$ can be identified by numerically solving the equation
+
+$$\frac{\frac{d }{d x} f_{\mathrm{scaled}}(x)|_{x_{0}}}{\frac{d }{d x} f_{\mathrm{original}}(x)|_{x_{0}}}=r$$
+
+where $r$ is the target ratio and $f_{\mathrm{scaled}}$ denotes the spline fit using the scaled coordinate $x/s$. This procedure is implemented via root-finding algorithms (e.g., uniroot in R), as detailed in the supplementary code.
+
+
+#Apendix
+For the Dugong 
+
+
+
+######
+info from scite about methodology available
+
+In recent years, the application of statistical and machine learning approaches, as well as spatial analysis, has significantly advanced the methodology of species distribution models (SDMs), particularly in the study of marine megafauna. Below, we summarize these methodologies, highlighting their advantages, disadvantages, and preferred scenarios for use.
+
+1. Statistical Models: Generalized Additive Models (GAMs) and Generalized Linear Models (GLMs)
+
+Methodology: Generalized Additive Models (GAMs) and Generalized Linear Models (GLMs) are traditional statistical methods employed in SDMs to model species occurrences based on environmental predictors. GAMs allow for non-linear relationships between predictors and the response variable by using smooth functions, while GLMs can account for various distribution families (e.g., binomial for presence-absence data) (He et al., 2022).
+
+Advantages:
+
+Flexible in handling various data types and relationships.
+Capable of incorporating multiple predictor variables and their interactions (Hart et al., 2018; .
+Easily interpretable results, providing insights on how each environmental factor affects species distribution (Maxwell et al., 2013).
+Disadvantages:
+
+The assumption of independence among environmental variables can lead to biased results if confounders are not accounted for (Pollock et al., 2014).
+They may struggle with high-dimensional data and complex relationships, as they can be limited to linear or slightly non-linear dependencies (Hart et al., 2018; .
+Common Scenarios: GAMs and GLMs are particularly useful in scenarios with well-curated datasets where the relationships between environmental variables and distributions are expected to follow familiar patterns. They are frequently used in baseline ecological studies and habitat mapping for conservation, such as mapping habitat suitability for megafauna in specified areas (He et al., 2022)(Escalle et al., 2016).
+
+2. Machine Learning Approaches: Random Forests and MaxEnt
+
+Methodology: In the context of marine megafauna, Random Forests and the Maximum Entropy Model (MaxEnt) are popular machine learning techniques for SDMs. Random Forests utilize an ensemble of decision trees, providing robustness against overfitting, while MaxEnt focuses on estimating the probability distribution of species by maximizing information entropy based on environmental constraints (Wang et al., 2020; Roberts et al., 2016).
+
+Advantages:
+
+High predictive accuracy and robustness, particularly with complex datasets incorporating non-linear relationships and interactions Roberts et al., 2016).
+The ability to handle large datasets with many variables, making it suitable for rapidly expanding data from sensors and tracking technologies (Gredzens & Shaver, 2020).
+MaxEnt is advantageous in sparse data scenarios, as it offers reasonable estimates of species distributions based on available presence-only data (He et al., 2022).
+Disadvantages:
+
+Machine learning models require substantial data for training and can be difficult to interpret compared to traditional statistical models (Escalle et al., 2016).
+There is a risk of overfitting, particularly in Random Forests if not properly tuned and validated (He et al., 2022).
+Common Scenarios: These models are frequently applied in extensive ecological studies where large datasets are available, particularly those generated through remote sensing or tracking methods. They are particularly valuable in exploring species distributions across broad spatial scales in response to changing environmental conditions, as seen in assessments of marine habitats affected by anthropogenic activities (Wang et al., 2020; Roberts et al., 2016).
+
+3. Spatial Analysis Tools: Geographic Information Systems (GIS)
+
+Methodology: GIS-based spatial analysis enhances SDMs by allowing for the visualization and analysis of species distributions concerning spatial ecological variables. These tools can range from simple overlay analyses to complex spatial autoregressive models that account for the influence of neighboring values on species occurrences (Saüt et al., 2024).
+
+Advantages:
+
+Enables the integration of diverse spatial data sources, providing a comprehensive view of environmental variables influencing species distributions (González‐Irusta et al., 2014).
+Facilitates the analysis of spatial patterns and potential habitat connectivity, essential for conservation planning (Hart et al., 2018; .
+Disadvantages:
+
+The effectiveness of GIS analysis is highly dependent on the quality and resolution of the available spatial data, which can introduce biases if data is insufficient or outdated (Pollock et al., 2014).
+Spatial autocorrelation can complicate model assumptions; neglecting it can yield misleading results (González‐Irusta et al., 2014).
+Common Scenarios: GIS tools are widely used in planning marine protected areas (MPAs) and assessing the spatial impacts of fisheries on marine megafauna distributions. They are particularly valuable in conservation planning, where visualizing and understanding spatial interactions between species and habitats is crucial (Hart et al., 2018; Roberts et al., 2016).
+
+Conclusion
+
+The last decade has illuminated the utility of various methodologies, including traditional statistical approaches and modern machine learning techniques, in refining species distribution models for marine megafauna. Each approach brings unique strengths and challenges but collectively enhances our understanding of marine ecological dynamics. Future research benefits from continued integration of these methodologies, supported by robust datasets, to inform conservation strategies effectively.
+
+#####################################################################
+please focus on how to deal with physical barriers, permeable barriers, impassable and passable barriers, coastlines or any disruption in space when using SDM. write its advantages and disadvantages, and in which scenarios is this methodology more common
+When using species distribution models (SDMs) to understand marine ecosystems, it's crucial to effectively address physical barriers, permeable barriers, and any disruptions in space that may affect the movement and distribution of marine organisms. Below, I summarize methodologies for dealing with these barriers and disruptions, discuss their advantages and disadvantages, and outline scenarios where these methodologies are most applicable.
+
+1. Incorporating Physical Barriers in SDMs
+
+Methodology: Incorporating physical barriers into species distribution models can involve the use of geophysical data to define boundaries and barriers that may restrict or facilitate species movement. One such approach utilizes Integrated Nested Laplace Approximations (INLA) to model the effects of barriers on species distributions by allowing for the quantification of spatial variance due to environmental factors and species effects (Glew et al., 2019).
+
+Advantages:
+
+Quantitative Analysis: INLA provides a computationally efficient framework for modeling complex barriers and their effects on species distributions, enabling researchers to predict how barriers influence habitat use (Glew et al., 2019).
+Spatial Variance Measurement: This methodology assists in capturing spatial heterogeneity in species responses to barriers, leading to better predictions of species distribution in fragmented habitats.
+Disadvantages:
+
+Complexity in Modeling: Implementing INLA can be technically sophisticated and may require advanced statistical knowledge, making it less accessible for all practitioners (Glew et al., 2019).
+Data Limitations: Success relies heavily on the availability and quality of spatial environmental data, which may not be uniformly available across all regions.
+Common Scenarios: This method is common in studies where habitats are divided by significant physical features such as fjords, large rivers, or coastal rock formations that can influence the movement and genetic connectivity of species like fish or marine mammals (Núñez-Vallecillo et al., 2024).
+
+2. Modeling Permeable and Impassable Barriers
+
+Methodology: Models can distinguish between permeable and impassable barriers by incorporating resistance surfaces in SDMs. In this framework, variations in habitat permeability are accounted for, allowing species with differing mobility capacities to be represented accurately. For instance, physical barriers such as river outflows can be modeled to demonstrate their impact on larval dispersal and population connectivity (Han et al., 2015).
+
+Advantages:
+
+Flexibility in Output: This method allows for predictions to include various degrees of specificity regarding barriers—both facilitative (permeable) and obstructive (impassable)—thus providing a nuanced view of marine species movement (Han et al., 2015).
+Comprehensive Genetic Insights: By modeling how barriers affect gene flow, such methods help assess population structure and connectivity, which are essential for conservation and management (Eastwood et al., 2016).
+Disadvantages:
+
+Assumptions Regarding Dispersal: There may be a reliance on initial assumptions about how barriers affect species, which can lead to oversimplification of complex marine dynamics (Beltrán et al., 2017).
+Challenges in Validation: Validation of models concerning permeability often requires extensive field data, which can be resource-intensive to obtain.
+Common Scenarios: This methodology is particularly useful in regions featuring varied marine landscapes, such as areas with strong oceanographic currents or complex coastlines where species exhibit different dispersal capabilities (Sun et al., 2022).
+
+3. Addressing Coastline and Spatial Disruptions
+
+Methodology: Marine spatial planning models often integrate a comprehensive analysis of coastlines and disruptions, including human activities that might affect marine species. This involves using Geographic Information Systems (GIS) to visualize and analyze how space utilization and disruptions can impact habitats and migrations of marine megafauna (Augé et al., 2018).
+
+Advantages:
+
+Holistic Approach: GIS allows for the incorporation of multiple data types (oceanographic, ecological, anthropogenic) to assess how various factors, including coastlines and human activities, influence species distribution (Olsen et al., 2015).
+Enhanced Management Decisions: By visualizing and modeling areas of high disturbance, better marine management decisions can be made regarding the establishment of marine protected areas (MPAs) (Augé et al., 2018).
+Disadvantages:
+
+Dependence on Data Quality: The effectiveness of spatial analysis rests on the accuracy and resolution of the data used, which can limit model reliability if data is outdated or incomplete (Olsen et al., 2015).
+Complex Interactions: Interactions among various factors (e.g., environmental conditions, species behavior) can complicate the modeling processes, requiring sophisticated modeling approaches (Day et al., 2019).
+Common Scenarios: This methodology is widely used in the context of establishing MPAs, assessing the impact of coastal development, and managing fisheries, especially in areas where human activity poses significant threats to marine biodiversity (Augé et al., 2018).
+
+Conclusion
+
+The integration of physical barriers, permeability, coastlines, and spatial disruptions into SDMs provides a comprehensive understanding of marine megafauna distributions. Each methodology has its advantages and limitations and is best suited for specific ecological and management scenarios. As our knowledge of marine environments and species connectivity improves, these methodologies will become increasingly important in the sustainable management and conservation of marine biodiversity.
+
+###############################################################################################################
+
+In the context of species distribution modeling (SDM) for marine ecosystems, different methodologies address specific knowledge gaps, statistical problems, and limitations. Here, we summarize each approach's intended purpose and limitations using the references provided.
+
+1. Generalized Additive Models (GAMs) and Generalized Linear Models (GLMs)
+
+Knowledge Gap Addressed: These models aim to fill gaps in understanding the relationships between species distributions and environmental variables, especially when the relationships may not be linear (Wang et al., 2020).
+
+Statistical Problem: They address the issue of variability in species occurrences based on multiple, potentially non-linear environmental predictors, allowing for better understanding of habitat suitability and influencing factors on species distribution patterns (Pollock et al., 2014; .
+
+Limitations: Both GAMs and GLMs assume that environmental covariates are independent and may misrepresent interactions between predictors. They can perform poorly when dealing with complex, high-dimensional data, and are limited in their ability to account for unmeasured variables (Wang et al., 2020)(Pollock et al., 2014; . Moreover, their predictive capability is diminished in scenarios where data is sparse or biased (Wang et al., 2020).
+
+2. Machine Learning Approaches: MaxEnt and Random Forests
+
+Knowledge Gap Addressed: These methodologies aim to overcome limitations associated with traditional statistical models by handling large datasets with varying dimensions and missing data to provide predictions of species distributions under uncertainty (McClellan et al., 2014; Lewison et al., 2014).
+
+Statistical Problem: They address the problem of prediction accuracy in the face of complex relationships between species occurrences and environmental factors; specifically, they manage high-dimensional data patterns and potential overfitting caused by traditional statistical methods Lewison et al., 2014).
+
+Limitations: The complexity of these models makes them less interpretable than traditional GAMs or GLMs. They often require substantial data for effective training and validation. Overfitting is a concern, particularly if hyperparameters are not properly tuned (Hart et al., 2018; Boer et al., 2018). Additionally, they can struggle with rare events unless adjusted for bias or rarity Lewison et al., 2014).
+
+3. Joint Species Distribution Models (JSDMs)
+
+Knowledge Gap Addressed: JSDMs aim to fill the gap in understanding species interactions and co-occurrence by providing a framework for modeling multiple species simultaneously, thus allowing insights into complex ecological dynamics (Pollock et al., 2014; .
+
+Statistical Problem: They tackle the challenge of dependency issues among species by simultaneously accommodating species interactions, mitigating the assumption that distributions are solely independent (Pollock et al., 2014; . The use of JSDMs can provide a more integrated view of community structure and co-occurrence patterns.
+
+Limitations: The primary limitation of JSDMs is their complexity, both in terms of data requirements and computational demand for fitting models. The need for extensive data on multiple species can be resource-intensive and may render this approach impractical for less-studied taxa (Pollock et al., 2014; Lewison et al., 2014).
+
+4. Integrative Spatial Analysis (GIS-Based Methods)
+
+Knowledge Gap Addressed: GIS methods fill the gaps in spatial understanding by visually representing species distributions alongside anthropogenic and environmental data. This integration facilitates identifying critical areas for conservation and impacts of human activities (Augé et al., 2018; (Olsen et al., 2015; .
+
+Statistical Problem: These analyses specifically address the challenge of spatial autocorrelation and its effects on species distributions by allowing the representation of habitat fragmentation and connectivity (Augé et al., 2018; (Olsen et al., 2015; .
+
+Limitations: GIS approaches heavily depend on the quality and granularity of spatial data available; poor resolution can lead to inaccurate modeling results. Additionally, they may not effectively capture dynamic ecological processes over time, such as shifts in species distributions due to climate change (Olsen et al., 2015; Day et al., 2019).
+
+5. Cumulative Impact Assessment Models
+
+Knowledge Gap Addressed: These models are designed to synthesize various human impacts on marine megafauna to illustrate cumulative effects, especially in areas undergoing rapid development (Maxwell et al., 2013; Virgili et al., 2020).
+
+Statistical Problem: They address the complexity of estimating the collective impacts of multiple stressors on species distributions and behavior, which helps in conservation planning and management (Maxwell et al., 2013; Virgili et al., 2020).
+
+Limitations: The main limitation lies in data availability; many regions lack comprehensive datasets to assess cumulative impacts accurately. There's also a challenge surrounding the integration of different types of impact data, which may come from various methodologies and scales (Maxwell et al., 2013; Williams et al., 2017).
+
+Conclusion
+
+Each SDM methodology brings unique insights to the study of marine ecosystems while addressing specific knowledge gaps and statistical issues. However, they are accompanied by limitations that must be acknowledged to enhance the robustness and applicability of research findings. Balancing the strengths and weaknesses of these methodologies is key to effective marine conservation and management efforts.
+
+
+######################################################
+
+Species distribution models (SDMs) are vital for understanding the spatial distribution of marine species, particularly in relation to physical barriers (both permeable and impassable), as well as disruptions caused by coastlines and human activities. Below, we address methodologies for managing these challenges, their knowledge gaps, statistical problems, limitations, and common scenarios for application.
+
+1. Incorporating Physical Barriers in SDMs
+
+Methodology: To effectively model the impact of physical barriers, researchers often integrate resistance surfaces into SDMs. This involves quantifying the effects of barriers like coral reefs, cliffs, and man-made structures on species movement (Arterburn et al., 2023; . This approach can also include Integrated Nested Laplace Approximations (INLA) to assess the effects of barriers while taking into account spatial variance due to environmental features.
+
+Knowledge Gap Addressed: This methodology helps fill gaps in understanding how specific physical barriers affect gene flow, movement patterns, and overall distribution of marine species, especially in fragmented ecosystems (Arterburn et al., 2023; (Chung et al., 2019).
+
+Statistical Problem: It addresses the problem of species distributions being influenced by barriers and connectivity. This allows for accurate predictions of population dynamics under various movement conditions, providing a more nuanced view of species ecology in fragmented habitats (Schoenfeld et al., 2019).
+
+Limitations:
+
+Complexity: Modeling resistance surfaces can be intricate and requires substantial ecological and geographical data to be effective (Arterburn et al., 2023; .
+Data Dependence: Results heavily rely on the resolution and accuracy of the environmental data used to define barriers. Poor data quality can lead to misleading conclusions about species distributions (Chung et al., 2019).
+Common Scenarios:  Commonly utilized in studies examining the effects of large-scale geological features, urban development, and infrastructure projects on marine species, especially in coastal zones. For example, modeling larval dispersal around barriers such as ports or major river outflows (Arterburn et al., 2023; Mathijssen et al., 2020).
+
+2. Modeling Permeable and Impassable Barriers
+
+Methodology: Models that distinguish between permeable and impassable barriers allow for the integration of variable resistance values to specific barriers. This involves assessing how different landscapes or human-created structures facilitate or obstruct movement for various marine organisms (Boland et al., 2019).
+
+Knowledge Gap Addressed: This method addresses the lack of understanding regarding how different barriers act differently on species with varied mobility, providing insights into habitat connectivity and population structure in marine environments (Boland et al., 2019).
+
+Statistical Problem: It solves the issue of simplifying complex interactions among species behaviors influenced by barriers, allowing researchers to assess overall connectivity and estimate gene flow more accurately (Boland et al., 2019).
+
+Limitations:
+
+Assumption of Homogeneity: There can be an oversimplification in the model if the physical barriers are treated as uniform, which may not accurately reflect the true environmental conditions affecting species (Manhas et al., 2020).
+Data Intensity: Requires extensive datasets and assumptions about how species interact with barriers, making it resource-intensive (Boland et al., 2019).
+Common Scenarios:  This methodology is applied in regions with diverse marine habitats where species exhibit different mobility, such as around estuaries or coastal zones with both natural and artificial structures impacting movement.
+
+3. Addressing Coastlines and Spatial Disruptions
+
+Methodology: Using Geographic Information Systems (GIS), researchers can visually analyze and model how coastlines and other spatial disruptions (like marine reserves or human developments) affect species distribution (Waddell et al., 2023). This approach includes spatial modeling techniques that consider both the ecological characteristics of habitats and anthropogenic effects (Waddell et al., 2023).
+
+Knowledge Gap Addressed: GIS models help fill knowledge gaps regarding the influence of spatial layout and fragmentation on marine ecosystems, particularly how human activities modify habitats and species interactions (Waddell et al., 2023).
+
+Statistical Problem: The methodology addresses spatial autocorrelation and provides a framework for quantifying the effects of spatial disruptions on species distributions, crucial for effective marine spatial planning (Waddell et al., 2023).
+
+Limitations:
+
+Resolution Sensitivity: The quality of the results is highly dependent on the granularity and quality of spatial data used. Low-resolution data can lead to inaccurate modeling of species habitats Bossen et al., 2019).
+Dynamic Processes: GIS models may struggle to capture temporal changes in ecosystems, such as seasonal migrations or shifts due to climate change, potentially leading to outdated predictions (Waddell et al., 2023)Bossen et al., 2019).
+Common Scenarios:  Often utilized in marine protected area (MPA) planning and assessing impacts of coastal development on biodiversity, especially in highly urbanized areas where habitat disruption is prevalent (Waddell et al., 2023).
+
+4. Cumulative Impact Assessment Models
+
+Methodology: Cumulative impact assessment models are designed to integrate multiple sources of stress (e.g., fishing, pollution, habitat loss) that together influence marine megafauna. This involves statistical modeling techniques that calculate the combined effects of all stressors on species distributions and habitats (Sanders et al., 2018)(Fan et al., 2024; .
+
+Knowledge Gap Addressed: These models aim to fill gaps in understanding the aggregated effects of various human activities on marine ecosystems, providing comprehensive assessments of ecological risks to species (Sanders et al., 2018).
+
+Statistical Problem: They address the challenge of evaluating the cumulative impacts of multiple stressors on species distributions and behaviors, a complexity that is often inadequately captured by single-factor assessments (Fan et al., 2024; .
+
+Limitations:
+
+Data Availability: Comprehensive data on multiple stressors can be hard to obtain, particularly in poorly studied or underserved regions (Fan et al., 2024; Belay et al., 2024).
+Methodological Challenges: There may be inconsistencies in how different stressors are measured and assessed, complicating analyses of their cumulative effects (Fan et al., 2024; .
+Common Scenarios: These methodologies are particularly useful in heavily impacted areas where human activities overlap with critical habitats, such as near urban coasts or intensive fishing zones. They are important for informing management decisions that aim to mitigate the cumulative effects of anthropogenic pressures on marine biodiversity (Fan et al., 2024; Belay et al., 2024).
+
+Conclusion
+
+Different methodologies for SDM offer varied approaches to understanding the influence of physical barriers, coastlines, and spatial disruptions in marine ecosystems. Through these methodologies, researchers can effectively model the distribution of marine species while addressing specific knowledge gaps and statistical challenges. However, each methodology has inherent limitations that warrant careful consideration to ensure effective conservation and management strategies.
+
+###################################################################################################################
+
+please do the same focusing on what has been applied in marine megafauna, and the particular challenges this scenario (physical barriers permeable and impassable, as well as disruptions caused by coastlines and human activities)
+In the realm of marine megafauna research and conservation, it is critical to understand the dynamics of physical barriers, permeable and impassable barriers, as well as disruptions caused by coastlines and human activities. Various methodologies have been implemented to navigate these challenges, each with its specific purpose, advantages, disadvantages, and common scenarios of application.
+
+1. Incorporating Physical Barriers in SDMs
+
+Methodology: To account for physical barriers, researchers apply resistance modeling and integrated habitat suitability models to quantify how barriers like reefs, estuaries, or human infrastructures impede marine species movement (Lewison et al., 2018). For instance, barrier effects can be assessed using models that assign resistance values to different types of barriers based on their permeability to species movement.
+
+Knowledge Gap Addressed: This approach fills the knowledge gap regarding how specific physical structures affect the habitat connectivity and movement patterns of marine megafauna, thus providing insights for effective management strategies (Sprogis & Parra, 2022).
+
+Statistical Problem: The methodology addresses the biases in species distribution predictions that arise from ignoring barriers and habitat connectivity, yielding a finer resolution in spatial models of species distributions and behaviors (Lewison et al., 2018).
+
+Limitations:
+
+Data Intensity: Mapping and quantifying barriers necessitate high-resolution data, which may not always be available, especially in less studied marine environments (Sprogis & Parra, 2022).
+Simplistic Representation: Barriers may not be uniform; the models can oversimplify the effects of heterogeneous physical characteristics (Sprogis & Parra, 2022).
+Common Scenarios:  This methodology is particularly useful in studying habitat fragmentation due to infrastructure development, such as ports or oil rigs, impacting migratory routes for species like whales and dolphins (Thomson et al., 2021).
+
+2. Modeling Permeable and Impassable Barriers
+
+Methodology: Models can differentiate between permeable and impassable barriers by quantifying how these structures affect the mobility of marine megafauna, such as how different species navigate urban waterfronts and other modified environments (Svarachorn et al., 2023).
+
+Knowledge Gap Addressed: This approach addresses the lack of understanding of how varying barriers function differently for species with different migratory behaviors, thus highlighting the need for tailored conservation strategies (Svarachorn et al., 2023).
+
+Statistical Problem: The models combat the issue of oversimplifying animal movement by providing a nuanced framework that accounts for the adaptive responses of species to barriers (Wang et al., 2020).
+
+Limitations:
+
+Heterogeneous Responses: The responses to barriers can differ significantly between species, complicating the ability to generalize findings across taxa (Wang et al., 2020).
+Assumptions of Homogeneity: Potential oversights in capturing the dynamic nature of habitat use can lead to incomplete understandings of barrier effects (Wang et al., 2020).
+Common Scenarios:  This methodology is often employed in coastal management, where animal migration routes are impacted by urban development and fishing activities (Svarachorn et al., 2023).
+
+3. Addressing Coastlines and Spatial Disruptions
+
+Methodology: Using Geographic Information Systems (GIS) and complex statistical modeling, researchers analyze how coastlines and disruptions from human activities (e.g., fisheries, pollution) influence the distributions of marine megafauna (Lambert et al., 2025).
+
+Knowledge Gap Addressed: GIS integration helps address knowledge gaps related to spatial configurations and the impacts of anthropogenic factors on marine ecosystems, including habitat suitability and biodiversity hotspots (Lambert et al., 2025).
+
+Statistical Problem: This methodology tackles the complex issue of spatial autocorrelation in observational data, providing a structured approach to assessing how disruptions shape species distributions over time and space (Lambert et al., 2025).
+
+Limitations:
+
+Data Quality Dependence: The accuracy of predictions heavily depends on the quality and resolution of input data, which can vary widely across regions (Lambert et al., 2025).
+Temporal Dynamics: The potential for temporal changes in habitat use may remain unaddressed; static models might not capture seasonal shifts in megafauna behavior (Mazzoldi et al., 2019).
+Common Scenarios: This approach is commonly used for marine spatial planning and evaluating human impacts on critical marine habitats, particularly in regions experiencing development pressure (Lambert et al., 2025).
+
+4. Cumulative Impact Assessment Models
+
+Methodology: Cumulative impact assessment models combine multiple stressors (such as fishing, pollution, tourism) affecting marine megafauna in a holistic framework, enabling analysis of their combined effects on species distributions and ecosystem health (Pietroluongo et al., 2022; .
+
+Knowledge Gap Addressed: This methodology fills crucial knowledge gaps regarding the compounded effects of anthropogenic activities on marine ecosystems, facilitating better-informed conservation strategies (Pietroluongo et al., 2022; .
+
+Statistical Problem: It solves the statistical problem of evaluating the interactive effects of multiple environmental stressors, which are often assessed in isolation, leading to more accurate assessments of risks and protective measures Pimiento et al., 2020).
+
+Limitations:
+
+Data Limitations: Comprehensive datasets that encompass all relevant stressors may be lacking, hampering effective analysis (Pietroluongo et al., 2022; .
+Inconsistencies in Stressor Assessment: Challenges may arise from differences in methodologies used to assess various stressors, making integration complex Pimiento et al., 2020).
+Common Scenarios: This methodology is especially relevant in regions under intense human impact, such as coastal cities and fishing hotspots, where multiple stressors are in play (Pietroluongo et al., 2022; Pimiento et al., 2020).
+
+Conclusion
+
+Different methodologies for addressing physical and spatial barriers in species distribution modeling of marine megafauna serve unique roles in conservation efforts. Understanding the specifics of each methodology helps inform more nuanced and effective management strategies and highlights the necessity of integrating knowledge on species interactions with their ecosystems.
+####################################################
+However, they often neglect to consider the cumulative benefits from moving multiple barriers (Kemp and O'Hanley, 2010), and most have been developed for specific barrier-types and/or economically-important species in North America and the UK (Nunn and Cowx, 2012; Taylor and Love, 2003). Consequently, they have been designed for explicit contexts in developed countries where prior site data and/or other resources are often readily available and easily accessible (Kemp and O'Hanley, 2010). However, in less developed countries such as those in South East Asia, there tends to be relatively scant financial resources and site data (Baumgartner et al., 2016), so there is a need for methods that are low cost, time-efficient and can still function effectively with the limited available data. 
+
+
+% \subsection{Background}
+%important articles: 
+%horsak_dispersal_2025: istance does not make a barrier, and that the barrier permeability 
+%mthods: han, warren, morita, fullerton,
+%management context: hodgson martin 2018 grantham 2010
+%importance of considering barriers: kemp 2010 keith nislow
+%permeable barriers pepino
+%studies in aquatic environments: birk
+%check heino mardsen 2023
+%methods that get rid of the autocorr, mantel moritz
+%importance of corr: shurin
+%barriers for platipus mijangos 2022
+%check impassable
+%discussion size of a management area
+%write about extinction \citep{mccauley_marine_2015}, and management area importance
+%regional bath sharks https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0045958&xid=17259,15700002,15700021,15700186,15700191,15700256,15700259,15700262 neil 2012
+%coastal marine megafauna extinctions pimiento 2017, sensitivity of marine megafauna
+%d'souza 2013 on occupancy in a data poor dugong pop
+%dng behavior chilvers 2004 sheppard 2006
+%dng in egypt shawky 2024 shawky 2024 b
+
+
+chatgpt summary of articles
+
+1. Morita & Yokota (2002) – White-spotted charr and habitat fragmentation
+Problem: Dams fragment Japanese streams, threatening small, isolated charr populations.
+Methodology: Individual-based, age-structured, density-dependent model with demographic and environmental stochasticity.
+Why Used: Captures species-specific dynamics and stochastic risks critical for small populations.
+Limitations: High outcome variability, no fixed viable threshold, excludes genetic effects.
+Discussion Summary: Small fragmented populations are not viable long-term. Adult survival is critical. Urges dam removal/fish ladders to restore connectivity
+
+3. Chilvers et al. (2004) – Diving behavior of dugongs
+Problem: Dugong diving behavior was previously poorly understood due to observational limitations.
+Methodology: Use of time–depth recorders (TDRs) on 15 dugongs across 3 sites in Australia.
+Why Used: Allows precise measurement of dive depth, duration, and classification of dive types.
+Limitations: Small sample size; high inter-individual variability; difficulty interpreting biological functions of dive types.
+Discussion Summary: Most dives are shallow, supporting seagrass foraging. Substantial behavioral variation exists among individuals and regions, with implications for foraging ecology and conservation
+
+4. Sheppard et al. (2006) – Movement heterogeneity of dugongs
+Problem: Uncertainty about spatial scale and nature of dugong movements.
+Methodology: Satellite/GPS tracking and time-depth recorders on 70 dugongs.
+Why Used: Direct tracking reveals detailed movement patterns over varying scales.
+Limitations: Variable tracking durations; potential tag loss; indirect inference of behavioral motives.
+Discussion Summary: Dugongs exhibit highly individual movement behavior, with both localized and long-distance travel. Movements are rapid and directed, often crossing management boundaries—highlighting the need for multi-jurisdictional conservation strategies
+
+5. Wirsing et al. (2007) – Dugong microhabitat use under shark predation risk
+Problem: Influence of predator risk on marine herbivore (dugong) microhabitat selection was unknown.
+Methodology: Observational study linking dugong habitat use to shark abundance using ideal free distribution theory.
+Why Used: Tests risk-sensitive foraging predictions using predator-prey spatial dynamics.
+Limitations: Observational data limits causal inference; assumptions on microhabitat safety and food quality.
+Discussion Summary: Dugongs prefer edge (low-quality but safe) habitats under high shark risk, supporting the predation-risk sensitivity hypothesis. Tiger sharks indirectly shape seagrass structure by altering dugong behavior
+
+
+7. Martin et al. (2025, Version 1) – Marine megafauna density modeling (Red Sea)
+Problem: Estimating density of marine species using opportunistic aerial sightings.
+Methodology: Spatial point process modeling with hierarchical structure and INLA.
+Why Used: Suitable for sparse and incidental sightings; handles spatial heterogeneity.
+Limitations: Reliant on bathymetry as main covariate; observational biases possible.
+Discussion Summary: The model estimates species-specific density distributions and can inform spatial planning. Future improvements include additional covariates and finer-scale observations
+
+8. Martin et al. (2025, Version 2) – Refinement of Red Sea marine model
+Problem: Enhancing model predictions with refined covariate use.
+Methodology: As above with more targeted spatial resolution.
+Why Used: Improves prior model’s predictive power and ecological interpretation.
+Limitations: Data sparsity; limited covariates beyond bathymetry.
+Discussion Summary: Model successfully reveals spatial trends and emphasizes ecological relevance. Suggests using behavioral or ecological traits to refine risk exposure metrics
+
+9. R package comparison for Bayesian SDMs (probably from Martin 2015)
+Problem: Evaluating Bayesian tools for ecological spatial modeling.
+Methodology: Comparison of INLA vs MCMC-based methods for species distribution.
+Why Used: INLA offers computational efficiency and flexibility.
+Limitations: MCMC is slower but more flexible; INLA limited for highly non-Gaussian models.
+Discussion Summary: INLA is robust for spatial models with good computational performance. Recommended for applied ecology given software accessibility and interpretability
+
+#####################################################################################
+3. BF00048036.pdf
+Problem: How to handle spatial autocorrelation in ecological data analysis.
+Methodology: Review of statistical tools: correlograms, variograms, Mantel tests, kriging.
+Why This Method: Addresses biases caused by autocorrelation in ecological inference.
+Limitations: Requires complex computation; prior assumptions of spatial structure.
+Discussion Summary: Advocates integrating space into ecological analysis for robust inference and improved hypothesis testing.
+
+4. 1-s2.0-S030438001730073X-main.pdf
+Problem: Assess fragmentation effects on viability of stream-resident salmonid populations.
+Methodology: Individual-based spatially explicit model with demographic/environmental stochasticity.
+Why This Method: Captures effects of patch size and dispersal on long-term viability.
+Limitations: Limited dispersal data; simplified demographic structure; assumes fixed habitat quality.
+Discussion Summary: Small, isolated patches lead to higher extinction risks; connectivity is essential for persistence.
+
+5. 1-s2.0-S030438001930170X-main.pdf
+Problem: Explore dispersal corridors for terrestrial mammals in the Brazilian Amazon.
+Methodology: Resistance surface modeling integrated with connectivity and cost?distance analysis.
+Why This Method: Identifies potential corridors accounting for human land use and ecological preferences.
+Limitations: Accuracy depends on land use classification; assumes equal importance of all habitats.
+Discussion Summary: Large continuous forests are vital for connectivity; conservation should target identified corridors.
+
+6. 1-s2.0-S0141113622002070-main.pdf
+Problem: Evaluate predictive accuracy of different spatial distribution models for marine mammals.
+Methodology: Comparison of habitat-based models (e.g., GAMs) with effort-corrected sighting data.
+Why This Method: Quantifies how model structure and effort correction influence predictions.
+Limitations: Biases from sparse sightings; assumes covariates fully capture distribution patterns.
+Discussion Summary: Effort-corrected GAMs outperformed others; recommends standardized methods for monitoring.
+*THIS WAS DONE FOR DUGONGS IN NEOM*
+
+10. annurev.marine.010908.163757.pdf
+Problem: Evaluate effectiveness of MPAs in protecting marine biodiversity.
+Methodology: Meta-analysis of ecological studies and synthesis of policy frameworks.
+Why This Method: Allows empirical assessment across diverse geographies and taxa.
+Limitations: Heterogeneity in study design; publication bias possible.
+Discussion Summary: Well-enforced MPAs show significant biodiversity gains; enforcement and local context are crucial.
+
+11. Ecological Applications - 2012 - Pépino - Fish dispersal in fragmented landscapes
+Problem: Quantify the permeability of structural barriers (e.g., culverts) on stream fish dispersal.
+Methodology: Dispersal kernels (Laplace and Laplace mixtures) integrated into mark?recapture models; simulation-based estimation.
+Why This Method: Allows for simultaneous modeling of dispersal behavior and sampling design; supports estimation of barrier effects.
+Limitations: Complexity increases with heterogeneity and multiple barriers; assumes symmetric dispersal unless extended.
+Discussion Summary: Fish populations exhibit both sedentary and mobile components; simulations show detectability of barrier
+effects depends on sampling design.
+
+13. Ecology Letters - 2013 - Peterson - Modelling dendritic ecological networks in space
+Problem: Present taxonomy of modeling methods for dendritic ecological networks (DENs), e.g., stream networks.
+Methodology: Review and synthesis of spatial statistical methods, especially models that handle both 2-D and network topologies.
+Why This Method: Bridges gap between ecological theory and statistical modeling in complex spatial structures.
+Limitations: Limited empirical examples; methods can be technically demanding.
+Discussion Summary: Calls for integrated approaches using dual coordinate systems; stresses importance of considering network
+topology in ecological inference.
+
+22. file-8.pdf
+Problem: Evaluate demographic effects of fragmentation on brook trout in a stream network.
+Methodology: Individual-based mark-recapture over multiple generations; matrix population models by size and location.
+Why This Method: Captures both local demographic shifts and system-wide extinction risk.
+Limitations: Demands high sampling effort; assumes stable environmental conditions.
+Discussion Summary: Fragmentation increases extinction risk unless countered by high immigration or adaptive survival; suggests
+role of local adaptation in persistence.
+
+27. s41598-024-64760-8.pdf
+Problem: Identifies and prioritizes dugong habitats in India to meet global conservation goals, including the 30×30 biodiversity target.
+Methodology: MaxEnt species distribution modeling using presence-only data; combined with risk assessment from fishing pressure
+surveys.
+Why This Method: Effective for sparse data and wide-ranging species; captures spatial and seasonal habitat shifts across regions.
+Limitations: Relies on unstructured presence data; potential bias in citizen science contributions.
+Discussion Summary: High-risk suitable habitats identified; <15% of critical zones fall within protected areas; calls for spatially
+targeted conservation.
+
+28. s42003-022-04038-9.pdf
+Problem: Assesses how major dams restrict gene flow and threaten the viability of platypus populations.
+Methodology: Population genomics across 5 dammed and 4 undammed rivers using FST, PCA, and SNP/microsatellite data.
+Why This Method: Quantifies barrier effects on dispersal via genetic differentiation; informs long-term viability.
+Limitations: Sample size limits in some rivers; indirect inference of dispersal; microsatellite resolution lower than SNPs.
+Discussion Summary: Genetic differentiation increases with time since dam construction; recommends by-pass and translocation for
+conservation.
+
+29. science.1086909.pdf
+Problem: Investigates genetic divergence in hyperthermophilic Archaea (Sulfolobus) across geographically isolated geothermal
+regions.
+Methodology: High-resolution multilocus sequence analysis and AMOVA to measure genetic differentiation (FST).
+Why This Method: Tests whether geographic isolation or environmental factors drive microbial diversity patterns.
+Limitations: Single-locus data lacked resolution; no direct mechanistic explanation of dispersal limits.
+Discussion Summary: Concludes geographic barriers, not environment, shape Sulfolobus population structures, contradicting the
+'everything is everywhere' model.
+
+31. Trans Am Fish Soc - 2011 - Warren - Road Crossings as Barriers to Small?Stream Fish Movement.pdf
+Problem: Tests if different road crossing types act as barriers to small-stream fish movement in Arkansas.
+Methodology: Mark?recapture experiment across culverts, slabs, fords, and open-box crossings; ANOVA and G-tests used.
+Why This Method: Direct field-based comparison across structure types; relates fish movement to physical parameters like water
+velocity.
+Limitations: Limited to warmwater small-stream fishes; spatial replication but no long-term data.
+Discussion Summary: Culverts strongly impede fish movement compared to other crossings; design modifications could enhance fish
+passage.
+
+32. 1-s2.0-S0022098106000219-main.pdf
+Problem: Examines large-scale movement patterns of dugongs using satellite and GPS telemetry across Australian waters.
+Methodology: Field tracking with GPS/PTT transmitters and time-depth recorders; analysis of movement range and dive behavior.
+Why This Method: Provides empirical evidence of dugong mobility; supports management decisions across jurisdictions.
+Limitations: Potential tag detachment bias; limited to Australian coastal waters; variable tracking durations.
+Discussion Summary: Dugongs often travel >100 km, including return trips; deep dives while traveling increase net entanglement risk;
+findings suggest cross-jurisdictional management
+
+33. 1-s2.0-S030438000200128X-main.pdf
+Problem: Assesses viability of white-spotted charr in fragmented Japanese streams using modeling.
+Methodology: Individual-based model with age structure, density dependence, and stochasticity for PVA.
+Why This Method: Captures demographic and environmental uncertainty in small, isolated populations.
+Limitations: Simplified assumptions; short-term data sources; focused on one species and region.
+Discussion Summary: Small populations likely nonviable long-term; adult survival is key for persistence; dam removal or ladders
+needed.
+
+34. 1-s2.0-S030438001730073X-main.pdf
+Problem: Identifies essential fish habitats for vulnerable lane snapper in northeastern Brazil using spatial models.
+Methodology: Bayesian geostatistical models using INLA and SPDE in R-INLA; includes logistic and spatial models for age classes.
+Why This Method: Handles sparse, fishery-independent data; integrates spatial autocorrelation and environmental predictors.
+Limitations: Complexity of models; requires training in Bayesian methods; relies on accurate environmental covariates.
+Discussion Summary: Juveniles and adults show patchy, correlated spatial patterns; influenced by distance to coast, SST, and
+bathymetry; results inform spatial conservation.
+
+
+9. Ecological Applications - 2012 - Pépino - Fish dispersal in fragmented landscapes
+Problem: Quantify the effect of structural barriers (e.g., highways) on fish dispersal in streams.
+Methodology: Custom modeling framework using Laplace-based dispersal kernels with permeability parameters fitted to
+mark?recapture data.
+Why This Method: Integrates ecological process (dispersal) and sampling design into one model to assess barrier effects rigorously.
+Limitations: Model complexity increases with heterogeneity; results sensitive to sampling design and spatial configuration.
+Discussion Summary: No strong barrier effect detected; model allows better sampling strategy and barrier permeability estimation for
+future applications.
+
+11. Ecology Letters - 2013 - Peterson - Modelling dendritic ecological networks in space
+Problem: Address the limitations of conventional spatial models for ecosystems structured as dendritic ecological networks (DENs).
+Methodology: Review and taxonomy of spatial models including novel linear mixed models adapted for DENs.
+Why This Method: Captures both network topology and geographical space (dual coordinate system) in spatial correlation structures.
+Limitations: DENs are complex; models can be computationally demanding; integration with existing methods is still developing.
+Discussion Summary: Proposes a framework combining network structure with ecological process modeling; enhances predictions
+and management of stream ecosystems.
+
+whether a dispersal corridor will actually work it should be evaluated by my model
+
+to properly asses fragmentation effects we need to consider the range and the transparent barrier model. the importance of connectivity 1-s2.0-S030438001730073X-main.pdf
+
+
+1-s2.0-S030438001730073X-main.pdf
+1-s2.0-S0141113622002070-main.pdf
+
+#######################################################################################################################################
+
+Marine megafauna, such as whales, sharks, and dugongs, play pivotal roles in marine ecosystems. Often regarded as keystone species, they influence the abundance and distribution of other marine organisms \citep{estes_trophic_2011, estes_megafaunal_2016, pimiento_functional_2020, lambert_energyscapes_2025}. Dugongs, for instance, significantly contribute to the health of seagrass ecosystems by grazing on seagrass beds. This grazing activity prevents overgrowth, promotes habitat complexity, and supports diverse marine life \citep{burkholder_patterns_2013, rasul_grazing_2024, shawky_dugong_2024}. Consequently, conservation efforts targeting marine megafauna are vital to maintain marine ecosystem resilience. 
+
+*Globally listed as vulnerable to extinction (Marsh and Sobtzick, 2019), the dugong continues to be threatened by direct hunting, accidental entanglement in fishing nets, collisions with boats, and degradation of the seagrass habitats on which it primarily feeds (D'Souza et al., 2013; Marsh et al., 2002, 1999; Nasr et al., 2019; Ponnampalam et al., 2022; Preen, 2004; Sheppard et al., 2006). Decades of intense human pressures have reduced dugong populations to remnant individuals or small isolated herds on the brink of local extinction (Marsh et al., 2011; Marsh and Sobtzick, 2019; Tol et al., 2016), with only few remaining sizeable dugong populations primarily found in Australia, New Caledonia, Papua New Guinea, Arabian Gulf and Red Sea (Cleguer et al., 2017; Marsh et al., 2002; Preen, 1989, 2004; Preen et al., 2012). As a result, the global conservation of the dugong faces biological, multi-scalar and jurisdictional challenges that are illustrative of vulnerable large-ranging megaherbivores.*
+
+This is particularly true in the North of the Saudi Arabian Red Sea coast  where human activity is rapidly growing.
+
+
+Dugongs (\textit{Dugong dugon}) inhabit shallow coastal waters where their primary food source —seagrass— is found. Seagrass meadows, which are most abundant in intertidal and subtidal zones, typically grow at depths shallower than 10 meters, although some species may extend slightly deeper depending on water clarity and light availability \citep{chilvers_diving_2004, sheppard_dugong_2010}. Dugong movements closely follow tidal cycles, foraging in intertidal zones during high tides and retreating to deeper waters during low tides \citep{sheppard_effects_2009}. This close association with shallow seagrass habitats is also reflected in their diving behavior with most of their activity occurring near the surface \citep{chilvers_diving_2004, sheppard_movement_2006}. 
+
+
+While shallow seagrass habitats dominate their diving behavior with most of their activity occurring near the surface \citep{chilvers_diving_2004, sheppard_movement_2006}, dugong movements exhibit considerable complexity influenced by various ecological and anthropogenic factors.
+
+According to \citet{Wirsing behavioural trans} dugongs alter their behavioral patterns—such as reducing resting periods and frequently switching between foraging and traveling—in response to predation risk from tiger sharks.
+
+Additionally \citep{wirsing edge, heithaus towards predictive framewok} also described, they adapt their spatial usage, favoring deeper, safer waters despite the greater foraging benefits in shallow zones when predator presence increases.
+
+
+Human activities further complicate dugong habitat use describes \citep{souza long term, Wang 2025, Shawky overlapping}, with ongoing threats such as bycatch and illegal hunting significantly influencing their distribution patterns, leading to notable occupancy declines and habitat shifts over time . 
+
+However, their movement is much more complex 
+\citep{Wirsing behavioural trans} described Dugongs altered their behavioral sequences (foraging, resting, and traveling bouts) in response to increased predation risk from tiger sharks, by reducing resting bouts and alternating more frequently between foraging and traveling, particularly in shallow, high-risk habitats.
+
+\citep{wirsing edge}
+The study found that dugongs shift their habitat use in response to tiger shark presence, favoring safer deep waters over food-rich shallow areas when predation risk is high, demonstrating a dynamic trade-off between foraging benefits and safety.
+
+\citep{heithaus towards predictive framewok}
+
+The study found that dugong habitat use under predation risk is shaped by the interaction between landscape features and escape tactics, illustrating that dugongs, unlike some other species, adjust their spatial behavior in ways that depend on both predator presence and habitat structure.
+
+\citep{souza long term}
+The study found that dugong occupancy declined significantly over time and is now limited to shelter bays and channels lokely due to human activities like gillnet entanglement and hunting driving local extinctions even where suitable habitat remains. This idea was also supported by \citep{Wang 2025} who found dugong survival was threatened by fishing activities even were habitat suitability was high.
+
+\citep{Seal spatial priori}
+
+The study found that, beyond seagrass presence, factors such as depth, bathymetric slope, and distance from shore significantly influenced seasonal dugong habitat suitability, indicating complex spatial and temporal movement patterns.
+
+\citep{Shawky overlapping}
+
+The study found that dugong encounters frequently occur during fishing activities and transit, with overlapping human impacts such as bycatch and illegal harvest posing ongoing threats, highlighting that dugong presence and movement are closely intertwined with human use of the seascape.
+
+#########
+
+While ideally advanced techonolgy is used to estimate presence and abundance of Dugongs \citep{Maire detection dugong, Pollock aerial surveys, Hodgson unmanned} due to their elusiveness, and multifacorial behavior \citep{d'souza elusiveness}. Modeling methods  should also consider this technology might not be available in regions undergoing rapid coastal development with urgent need for conservation strategies.
+
+Methods using seagrass feeding trails are a good first approach for identification of dugong feeding sites to inform spatial conservation planning amidst rapid coastal development threats.
+
+However, because of dugong movement heterogeneity and large amount of factors affecting their behavior new methodologies should explicitly account for spatial dependencies product of underlying patterns that cannot be explained by measured covariates \citep{legendre_spatial_1989, guisan_predicting_2005, pollock_understanding_2014}. This is particularly true at local scales where data is scarce \citep{d'souza}.
+
+Explicitly modeling spatial dependencies has one major set back when a species distribution is concentrated close to the shore where physical barriers such as coastlines or or islands are present \citep{e.g. d'souza}. This is that spatial autocorrelation is smoothed over \textit{impermeable barriers} extending dependencies from sea to land \citep{Bakka}. On top of that, we need to address the question whether spatial autocorrelation should be equally smoothed over *normal area* and areas where \textit{permeable barriers} are present, that is areas where Dugongs are less likely to be found because of their nature e.g. deep areas because of their diving behavior \citep{Chilvers, Sheppard}. 
+
+By developing a spatial model incorporating random effects and varying permeability of physical barriers, our study aims to enhance understanding of Dugong distribution and inform conservation efforts. This modeling framework not only addresses the specific challenges encountered in the Red Sea but also provides a generalizable methodology for other marine and ecological studies in complex spatial environments. 
+
+
+
+#########
+
+The Arabian Red Sea, a marine biodiversity hotspot and home to vulnerable dugong populations with limited data \citep{preen_distribution_2004, nasr_status_2019, khamis_identifying_2022}, provides an ideal context for demonstrating the Transparent Barrier model. 
+
+We focused on modeling Dugong distribution along the northern coast of the Saudi Arabian Red Sea, an area characterized by a complex spatial structure with numerous islands and permeable barriers with varying transparency. 
+
+
+We used incidental Dugong sightings data collected opportunistically from tourism activities, research expeditions, and citizen science initiatives in our analysis. A Poisson process framework is employed as a suitable modeling approach for randomly occurring events \citep{simpson_going_2016, illian_toolbox_2012}.
+
+Existing geographic data groups islands imprecisely, complicating detailed spatial modeling. To address this issue, rather than using bathymetry as a direct environmental covariate we used it to represent islands and depths accurately despite a coarse 100-meter resolution.
+
+
+
+########################################################
+ADD TO INTRO AND BACKGROUNF
+
+
+\citep{khamis_identifying_2022} \citep{el_shaffai_second_2016, qurban_seagrass_2019}
+
+
+
+
+
+\section{Discussion}
+
+Write about barriers and marine ecosystems; endangered species...
+%important articles: 
+%horsak_dispersal_2025: istance does not make a barrier, and that the barrier permeability 
+%mthods: han, warren, morita, fullerton,
+%management context: hodgson martin 2018 grantham 2010
+%importance of considering barriers: kemp 2010 keith nislow
+%permeable barriers pepino
+%studies in aquatic environments: birk
+%check heino mardsen 2023
+%methods that get rid of the autocorr, mantel moritz
+%importance of corr: shurin
+%barriers for platipus mijangos 2022
+%check impassable
+%discussion size of a management area
+%write about extinction \citep{mccauley_marine_2015}, and management area importance
+%regional bath sharks https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0045958&xid=17259,15700002,15700021,15700186,15700191,15700256,15700259,15700262 neil 2012
+%coastal marine megafauna extinctions pimiento 2017, sensitivity of marine megafauna
+%d'souza 2013 on occupancy in a data poor dugong pop
+%dng behavior chilvers 2004 sheppard 2006
+%dng in egypt shawky 2024 shawky 2024 b
+%dng example neom khamis_identifying_2022
+
+\citep{legendre_spatial_1989, heino_metacommunity_2015, horsak_dispersal_2025}. cowen 2009 nislow 2011 warren 2011 han 2007 morita 2001 national inventory 2003 fullerton 2010 hodgson pepino 2012 morritz 2013
+
+
+Because individual counts per study for megafauna are low \citep{Shawky assesing dugong overlapping}, at local scales methods shouldn't rely on pseudo-absence data due to a lack of verified absence records \citep{Khamis 2022, Wang 2025}. On the contrary, model should consider individual counts.
+
