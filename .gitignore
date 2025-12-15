@@ -2,3 +2,22 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Project-specific folders to ignore
+plots/
+dng_plots/
+gif/
+gif.sel/
+w's/
+Articles/
+Springer Nature LaTeX Template/
+presentationPaula_files/
+Raul/
+presentactionMike_files/
+dng.data/
+species_plots/
+
+# Specific files to ignore
+saved.rdata/
+thesis draft
+
