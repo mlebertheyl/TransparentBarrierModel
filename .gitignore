@@ -21,3 +21,6 @@ species_plots/
 saved.rdata/
 thesis draft
 
+.DS_Store
+.Rproj.user/
+
